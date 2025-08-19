@@ -60,7 +60,12 @@ export default function ExploreLayout() {
     setShowSignup(true);
   };
 
-  const isModalOpen = currentStep !== 'explore' || showLogin || showSignup || showSignupConfirmation || showIdentification;
+  const isModalOpen =
+    currentStep !== 'explore' ||
+    showLogin ||
+    showSignup ||
+    showSignupConfirmation ||
+    showIdentification;
 
   return (
     <div className="relative min-h-screen">
@@ -70,21 +75,40 @@ export default function ExploreLayout() {
         }`}
       >
         {/* Desktop Header */}
-        <div className="hidden md:flex justify-between items-center px-6 py-4 bg-white shadow-sm sticky top-0 z-10">
-          <div className="text-2xl font-bold text-green-800">Atlasia</div>
+        <div className="hidden md:flex items-center justify-between px-6 py-4 bg-white shadow-sm sticky top-0 z-10">
+          {/* Removed 'Atlasia' text here */}
+          <h1 className="text-2xl font-bold text-green-800">ATLASIA</h1>
           <div className="flex-1 max-w-3xl mx-10">
             <SearchBar onClick={handleSearchBarClick} />
           </div>
           <div className="flex gap-4 text-sm">
-            <button onClick={handleLogin} className="bg-green-800 text-white px-6 py-2 rounded-full font-medium hover:bg-green-700 transition">Log in</button>
-            <button onClick={handleSignup} className="bg-white text-black px-6 py-2 rounded-full font-medium hover:bg-green-600 hover:text-white transition border border-gray-300">Sign up</button>
+            <button
+              onClick={handleLogin}
+              className="bg-green-800 text-white px-6 py-2 rounded-full font-medium hover:bg-green-700 transition"
+            >
+              Log in
+            </button>
+            <button
+              onClick={handleSignup}
+              className="bg-white text-black px-6 py-2 rounded-full font-medium hover:bg-green-600 hover:text-white transition border border-gray-300"
+            >
+              Sign up
+            </button>
           </div>
         </div>
 
-        {/* Mobile Header */}
-        <div className="md:hidden">
+        {/* Mobile Header - only on mobile */}
+        <div className="block md:hidden">
+          {/* App name centered on top */}
+          <div className="flex items-center justify-center py-4 bg-white shadow-sm">
+            <span className="text-2xl font-bold text-green-700">ATLASIA</span>
+          </div>
+
+          {/* Mobile Navbar */}
           <Navbar title="Découvrir" />
-          <div className="px-4 mt-4">
+
+          {/* Mobile Search Bar */}
+          <div className="px-4">
             <SearchBar onClick={handleSearchBarClick} />
           </div>
         </div>

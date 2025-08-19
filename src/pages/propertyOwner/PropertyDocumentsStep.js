@@ -4,10 +4,10 @@ import { usePropertyCreation } from "../../context/PropertyCreationContext";
 import NavigationButton from "../../components/shared/NavigationButtons";
 
 const stepOrder = [
-  { key: "localisation", label: "Localisation", to: "/property-localisation" },
+  { key: "localisation", label: "Localisation", to: "/add-property" },
   { key: "propertyType", label: "Type de propriété", to: "/property-type" },
-  { key: "info", label: "Informations", to: "/property-info" },
-  { key: "equipments", label: "Equipements", to: "/property-equipments" },
+  { key: "info", label: "Informations", to: "/property-infos" },
+  { key: "equipments", label: "Equipements", to: "/property-equip" },
   { key: "photos", label: "Photos", to: "/property-photos" },
   { key: "title", label: "Titre", to: "/property-title" },
   { key: "description", label: "Description", to: "/property-description" },
@@ -47,6 +47,9 @@ export default function PropertyDocumentsStep() {
     <div className="min-h-screen bg-white flex flex-col pb-24">
       {/* Completed steps before current */}
       <div className="w-full max-w-md mx-auto px-4 pt-4">
+        <div className="flex items-center justify-center py-4 bg-white shadow-sm">
+            <span className="text-2xl font-bold text-green-700">ATLASIA</span>
+        </div>
         <div className="mb-4">
           {stepsBefore.map((step) =>
             propertyData.stepsCompleted?.[step.key] ? (

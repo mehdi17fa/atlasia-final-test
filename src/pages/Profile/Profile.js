@@ -53,10 +53,15 @@ export default function Profile() {
       </ul>
 
       <div className="mt-6 text-center">
-        <button className="bg-green-700 text-white py-2 px-6 rounded-full font-medium">
+        <button 
+        onClick={() => navigate('/welcome-owner')}
+        className="bg-green-700 text-white py-2 px-6 rounded-full font-medium">
           Devenir propriétaire
         </button>
       </div>
     </div>
   );
 }
+
+
+

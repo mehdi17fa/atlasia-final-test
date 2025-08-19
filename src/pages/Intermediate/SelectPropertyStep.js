@@ -47,7 +47,7 @@ export default function SelectPropertyStep() {
   const handleNext = () => {
     if (selectedProperty) {
       // Pass selected property and date to the next step
-      navigate("/create-package/activities", {
+      navigate("/activities", {
         state: { date, property: selectedProperty }
       });
     }

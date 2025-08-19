@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import SectionTitle from "../../components/shared/SectionTitle";
 import PropertyCard from "../../components/ListingCard/PropertyCard";
 import Calendar from "../../components/shared/Calendar";
+import OwnerBottomNavbar from "../../components/shared/NavbarPropriétaire";
 
 const user = {
   firstName: "Mehdi",
@@ -53,12 +54,16 @@ export default function WelcomeOwner() {
 
   return (
     <div className="min-h-screen bg-white flex flex-col pb-24">
-      <div className="w-full max-w-md mx-auto px-4 pt-4">
-        <h1 className="text-2xl font-bold text-green-900 mb-2">Bienvenue {user.firstName}:</h1>
+      <div className="w-full max-w-7xl mx-auto px-4 pt-4 md:px-8 lg:px-16">
+        {/* App name centered on top */}
+          <div className="flex items-center justify-center py-4 bg-white shadow-sm">
+            <span className="text-2xl font-bold text-green-700">ATLASIA</span>
+          </div>
+        <h1 className="text-2xl font-bold text-green-900 mb-2 mt-4">Bienvenue {user.firstName}:</h1>
         <SectionTitle title="Gérer mes propriétés" />
         <div className="flex gap-2 mb-4">
-          <button className="bg-green-700 text-white px-4 py-2 rounded-full font-semibold text-sm shadow hover:bg-green-800 transition" onClick={() => navigate('/property-localisation')}>Ajouter propriété</button>
-          <button className="border border-green-800 text-green-700 px-4 py-2 rounded-full font-semibold text-sm bg-white hover:bg-green-800 transition" onClick={() => navigate('/my-properties')}>Voir mes propriétés</button>
+          <button className="bg-green-700 text-white px-4 py-2 rounded-full font-semibold text-sm shadow hover:bg-green-800 transition" onClick={() => navigate('/add-property')}>Ajouter propriété</button>
+          <button className="border border-green-800 text-green-700 px-4 py-2 rounded-full font-semibold text-sm bg-white hover:bg-green-800 transition" onClick={() => navigate('/list-property-owner')}>Voir mes propriétés</button>
         </div>
         <SectionTitle title="Gérer mes réservations" />
         <div className="flex border-b border-gray-200 mb-4">
@@ -119,5 +124,6 @@ export default function WelcomeOwner() {
         </div>
       )}
     </div>
+    
   );
 }

@@ -14,10 +14,10 @@ const cities = [
 ];
 
 const stepOrder = [
-  { key: "localisation", label: "Localisation", to: "/property-localisation" },
+  { key: "localisation", label: "Localisation", to: "/add-property" },
   { key: "propertyType", label: "Type de propriété", to: "/property-type" },
-  { key: "info", label: "Informations", to: "/property-info" },
-  { key: "equipments", label: "Equipements", to: "/property-equipments" },
+  { key: "info", label: "Informations", to: "/property-infos" },
+  { key: "equipments", label: "Equipements", to: "/property-equip" },
   { key: "photos", label: "Photos", to: "/property-photos" },
   { key: "title", label: "Titre", to: "/property-title" },
   { key: "description", label: "Description", to: "/property-description" },
@@ -71,9 +71,13 @@ export default function AddProperty() {
     <div className="min-h-screen bg-white flex flex-col pb-24">
       {/* Progress bar */}
       <div className="w-full max-w-md mx-auto mt-6 mb-2 px-4">
-        <h1 className="text-green-800 text-2xl font-bold text-center mb-2">
-          Atlasia
-        </h1>
+        <div className="flex items-center justify-center py-4 bg-white shadow-sm">
+            <span className="text-2xl font-bold text-green-700">ATLASIA</span>
+            <button
+                    onClick={() => navigate("/welcome-owner")}
+
+                    className="absolute left-0 ml-4 text-2xl text-black">&lt;</button>
+        </div>
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 pt-4">
           <div className="mb-4">
             {stepOrder.slice(0, currentStepIndex).map((step) =>

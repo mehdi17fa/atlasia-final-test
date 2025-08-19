@@ -12,7 +12,7 @@ import { ReactComponent as ChaletIconBlack } from "../../assets/icons/Properties
 import { ReactComponent as ChaletIconGreen } from "../../assets/icons/Properties/chaletGreen.svg";
 import { ReactComponent as StudioIconBlack } from "../../assets/icons/Properties/studioBlack.svg";
 import { ReactComponent as StudioIconGreen } from "../../assets/icons/Properties/studioGreen.svg";
-import AddProperty from "./addProperty";
+import AddProperty from "./AddProperty";
 
 const propertyTypes = [
   {
@@ -38,10 +38,10 @@ const propertyTypes = [
 ];
 
 const stepOrder = [
-  { key: "localisation", label: "Localisation", to: "/property-localisation" },
+  { key: "localisation", label: "Localisation", to: "/add-property" },
   { key: "propertyType", label: "Type de propriété", to: "/property-type" },
-  { key: "info", label: "Informations", to: "/property-info" },
-  { key: "equipments", label: "Equipements", to: "/property-equipments" },
+  { key: "info", label: "Informations", to: "/property-infos" },
+  { key: "equipments", label: "Equipements", to: "/property-equip" },
   { key: "photos", label: "Photos", to: "/property-photos" },
   { key: "title", label: "Titre", to: "/property-title" },
   { key: "description", label: "Description", to: "/property-description" },
@@ -68,6 +68,9 @@ export default function PropertyTypeStep() {
     <div className="min-h-screen bg-white flex flex-col pb-24">
       {/* Progress bar */}
       <div className="w-full max-w-md mx-auto px-4 pt-4">
+        <div className="flex items-center justify-center py-4 bg-white shadow-sm">
+            <span className="text-2xl font-bold text-green-700">ATLASIA</span>
+        </div>
         <div className="mb-4">
           {stepOrder.slice(0, currentStepIndex).map((step) =>
             propertyData.stepsCompleted[step.key] ? (
@@ -120,7 +123,7 @@ export default function PropertyTypeStep() {
                   propertyType: true,
                 },
               }));
-              navigate("/property-info");
+              navigate("/property-infos");
             }}
           >
             Suivant

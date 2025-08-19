@@ -53,6 +53,10 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // ✅ Hide navbar on all routes like /chat/anything
+  const isChatPage = /^\/chat\/[^/]+$/.test(location.pathname);
+  if (isChatPage) return null;
+
   return (
     <nav className="fixed bottom-0 w-full bg-white border-t border-gray-200 z-50">
       <div className="flex justify-around items-center py-2">
