@@ -163,10 +163,11 @@ export default function PropertySummary() {
 
       <button
         className="mt-6 w-full bg-green-800 text-white rounded-full py-3 font-semibold text-lg hover:bg-green-900 transition"
-        onClick={() => navigate(`/publish-property/${property._id}`)} // ✅ propertyId included
+        onClick={() => navigate(`/publish-property/${property._id}`)} // ✅
       >
         Terminer
       </button>
+
     </div>
   );
 }

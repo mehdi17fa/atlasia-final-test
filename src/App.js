@@ -40,6 +40,7 @@ import PropertyDescriptionStep from './pages/propertyOwner/PropertyDescriptionSt
 import PropertyPriceStep from './pages/propertyOwner/PropertyPriceStep';
 import PropertyDocumentsStep from './pages/propertyOwner/PropertyDocumentsStep';
 import PropertySummary from './pages/propertyOwner/PropertySummary';
+import PublishProperty from './pages/propertyOwner/PublishProperty';
 import MyProperties from './pages/propertyOwner/MyProperties';
 
 // Intermédiaire
@@ -185,6 +186,8 @@ function App() {
         <Route path="/property-price" element={<PropertyPriceStep />} />
         <Route path="/property-documents" element={<PropertyDocumentsStep />} />
         <Route path="/property-summary" element={<PropertySummary />} />
+        <Route path="/publish-property/:id" element={<PublishProperty />} />
+
         <Route path="/my-properties" element={<MyProperties />} />
 
         {/* Intermediate */}

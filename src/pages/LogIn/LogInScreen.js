@@ -1,14 +1,14 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { AuthContext } from '../../context/AuthContext'; // ← import context
+import { AuthContext } from '../../context/AuthContext';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { login } = useContext(AuthContext); // ← get login function
+  const { login } = useContext(AuthContext); // get login function
 
   const validateEmail = (email) =>
     /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
@@ -31,13 +31,13 @@ export default function LoginScreen() {
         password
       });
 
-      // Update global auth state and localStorage
+      // Update global auth state and store token
       login(response.data.user, response.data.accessToken);
 
       // Navigate based on role
-      if (response.data.user.role === 'owner') navigate('/owner-dashboard');
+      if (response.data.user.role === 'owner') navigate('/owner-welcome');
       else if (response.data.user.role === 'partner') navigate('/partner-dashboard');
-      else navigate('/profile'); // ← default to profile page
+      else navigate('/profile');
 
     } catch (err) {
       console.error('Login error:', err.response?.data || err.message);
@@ -62,13 +62,8 @@ export default function LoginScreen() {
           </button>
 
           <div className="flex flex-col items-center justify-start px-6 py-8 w-full">
-            <h1 className="text-2xl font-bold text-black text-center mb-6">
-              Log In
-            </h1>
-
-            <h2 className="text-3xl font-bold text-green-800 text-center mb-8">
-              Welcome back!
-            </h2>
+            <h1 className="text-2xl font-bold text-black text-center mb-6">Log In</h1>
+            <h2 className="text-3xl font-bold text-green-800 text-center mb-8">Welcome back!</h2>
 
             <div className="w-full space-y-4 border border-gray-300 rounded-xl p-4 mb-4">
               <input
