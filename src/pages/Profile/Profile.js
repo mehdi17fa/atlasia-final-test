@@ -1,13 +1,15 @@
 // src/pages/Profile/Profile.js
-import React from 'react';
+import React, { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SectionTitle from '../../components/shared/SectionTitle';
 import DefaultAvatar from '../assets/default-pp.png';
+import { AuthContext } from '../../context/AuthContext'; // ← import context
 
 export default function Profile() {
   const navigate = useNavigate();
+  const { user, logout } = useContext(AuthContext); // ← get user and logout
 
-  // Routes associées à chaque item
+  // Routes for each menu item
   const menuItems = [
     { label: 'Info Personnel', path: '/edit-profile' },
     { label: 'Ma Balance et Payments', path: '/payments' },
@@ -17,23 +19,38 @@ export default function Profile() {
     { label: 'Séjour de travaille', path: '/work-stays' },
   ];
 
+  if (!user) {
+    return (
+      <div className="text-center mt-20 text-gray-500">
+        Please log in to view your profile.
+      </div>
+    );
+  }
+
   return (
     <div className="pb-20 px-4 mt-12 relative">
       <div className="text-center text-green-700 font-bold text-2xl mb-4">
         ATLASIA
       </div>
+
       <div className="text-center mt-6">
         <div className="w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-green-600">
           <img
-            src={DefaultAvatar}
+            src={user.profilePic || DefaultAvatar}
             alt="Profile"
             className="w-full h-full object-cover"
           />
         </div>
-        <h1 className="font-semibold text-3xl mt-2">Amine Mellouli</h1>
+
+        <h1 className="font-semibold text-3xl mt-2">{user.fullName || user.email}</h1>
         <div className="mt-4 text-green-700 font-medium">
-          Devenir partenaire avec Atlasia<br />
-          <span className="text-sm underline">voir plus</span>
+          {user.role === 'partner'
+            ? 'Devenir partenaire avec Atlasia'
+            : 'Bienvenue sur Atlasia'}
+          <br />
+          <span className="text-sm underline cursor-pointer" onClick={() => navigate('/edit-profile')}>
+            voir plus
+          </span>
         </div>
       </div>
 
@@ -46,22 +63,26 @@ export default function Profile() {
               className="w-full flex justify-between items-center py-3 px-4 border rounded-lg bg-gray-50 hover:bg-gray-100 text-left"
             >
               <span>{item.label}</span>
-            
             </button>
           </li>
         ))}
       </ul>
 
-      <div className="mt-6 text-center">
-        <button 
-        onClick={() => navigate('/welcome-owner')}
-        className="bg-green-700 text-white py-2 px-6 rounded-full font-medium">
-          Devenir propriétaire
+      <div className="mt-6 text-center space-y-2">
+        <button
+          onClick={() => navigate('/edit-profile')}
+          className="bg-green-700 text-white py-2 px-6 rounded-full font-medium"
+        >
+          Modifier le profil
+        </button>
+
+        <button
+          onClick={logout}
+          className="bg-red-500 hover:bg-red-600 text-white py-2 px-6 rounded-full font-medium"
+        >
+          Déconnexion
         </button>
       </div>
     </div>
   );
 }
-
-
-

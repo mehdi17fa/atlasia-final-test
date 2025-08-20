@@ -1,38 +1,97 @@
-import React, { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom'; // 👈 Ajoute ceci
-import { ReactComponent as EditIcon } from '../../assets/icons/edit.svg'; // Use your edit icon here
-import { ReactComponent as ShareIcon } from '../../assets/icons/share.svg';
-import defaultProfilePic from '../assets/default-pp.png'; // ✅ Ton image par défaut (à adapter)
+// src/pages/Profile/EditProfile.js
+import React, { useContext, useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
+import defaultProfilePic from '../assets/default-pp.png';
 import { ReactComponent as MyEditIcon } from '../../assets/icons/pen.svg';
+import axios from 'axios';
 
 export default function EditProfileScreen() {
+  const { user, setUser } = useContext(AuthContext);
+  const navigate = useNavigate();
+  const fileInputRef = useRef(null);
+
   const [profile, setProfile] = useState({
-    lastName: 'Mellouli',
-    firstName: 'Amine',
-    email: 'amine.mellouli@gmail.com',
-    phone: '+2126-76756534',
+    fullName: '',
+    email: '',
+    phone: '',
+    gender: '',
   });
+  const [profileImage, setProfileImage] = useState(defaultProfilePic);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const navigate = useNavigate(); // 👈 Initialise le hook
-
-  const [profileImage, setProfileImage] = useState(defaultProfilePic); // 👈 Par défaut
-  const fileInputRef = useRef(null); // 👈 Référence vers input type="file"
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        fullName: user.fullName || '',
+        email: user.email || '',
+        phone: user.phone || '',
+        gender: user.gender || '',
+      });
+      setProfileImage(user.profilePic || defaultProfilePic);
+    }
+  }, [user]);
 
   const handleChange = (field, value) => {
     setProfile({ ...profile, [field]: value });
   };
 
   const handleImageClick = () => {
-    fileInputRef.current.click(); // 👈 Clique programmé
+    fileInputRef.current.click();
   };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const imageUrl = URL.createObjectURL(file); // 👈 Affichage local sans upload
-      setProfileImage(imageUrl);
+      setSelectedFile(file);
+      setProfileImage(URL.createObjectURL(file));
     }
   };
+
+  const handleSave = async () => {
+    // Basic client-side validation
+    if (!profile.fullName.trim()) return alert("Full name cannot be empty.");
+    if (profile.fullName.length > 50) return alert("Full name is too long.");
+    if (!/^[a-zA-Z\s'-]+$/.test(profile.fullName)) return alert("Full name contains invalid characters.");
+  
+    if (profile.phone && !/^[0-9+\s-]{6,20}$/.test(profile.phone)) {
+      return alert("Phone number format is invalid.");
+    }
+  
+    if (profile.gender && !['Male','Female','Other'].includes(profile.gender)) {
+      return alert("Gender must be Male, Female or Other.");
+    }
+  
+    setLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('email', user.email);
+      formData.append('fullName', profile.fullName.trim());
+      formData.append('phone', profile.phone.trim());
+      formData.append('gender', profile.gender);
+  
+      if (selectedFile) formData.append('profilePic', selectedFile);
+  
+      const response = await axios.post(
+        'http://localhost:4000/api/auth/complete-profile',
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+  
+      setUser(response.data.user);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      navigate('/profile');
+    } catch (err) {
+      console.error('Error updating profile:', err.response?.data || err.message);
+      alert(err.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+
+  if (!user) return <div className="text-center mt-20">Please log in to edit profile.</div>;
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -40,27 +99,21 @@ export default function EditProfileScreen() {
       <div className="bg-green-800 text-white pt-8 flex justify-between relative">
         <h1 className="text-lg font-semibold w-full text-center mb-4">Modifier mon profil</h1>
 
-        {/* 👇 Bouton retour */}
         <button
-          onClick={() => navigate('/profile')} // 👈 Va à la page précédente
+          onClick={() => navigate('/profile')}
           className="absolute left-4 top-4 w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center"
         >
           <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
           </svg>
         </button>
-
-        {/* Bouton Share */}
-       <button className="absolute right-4 top-4 w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center">
-        <ShareIcon className="w-5 h-5" fill="white" stroke="white" />
-       </button>
       </div>
 
       {/* Profile photo */}
       <div className="flex flex-col mt-12 items-center">
         <div className="relative">
           <img
-            src={defaultProfilePic}
+            src={profileImage}
             alt="Profil"
             className="w-28 h-28 rounded-full border-4 border-white object-cover"
           />
@@ -86,10 +139,10 @@ export default function EditProfileScreen() {
       {/* Form fields */}
       <div className="mt-12 px-4 md:px-40 space-y-6">
         {[
-          { label: 'Nom', value: profile.lastName, key: 'lastName' },
-          { label: 'Prénom', value: profile.firstName, key: 'firstName' },
-          { label: 'Adresse email', value: profile.email, key: 'email' },
+          { label: 'Nom complet', value: profile.fullName, key: 'fullName' },
+          { label: 'Adresse email', value: profile.email, key: 'email', disabled: true },
           { label: 'Numéro de téléphone', value: profile.phone, key: 'phone' },
+          { label: 'Gender', value: profile.gender, key: 'gender' },
         ].map((field) => (
           <div key={field.key}>
             <label className="block text-lg font-medium text-gray-700">{field.label}</label>
@@ -98,9 +151,10 @@ export default function EditProfileScreen() {
                 type="text"
                 value={field.value}
                 onChange={(e) => handleChange(field.key, e.target.value)}
-                className="flex-1 outline-none text-gray-900 text-lg"
+                className={`flex-1 outline-none text-gray-900 text-lg ${field.disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                disabled={field.disabled || false}
               />
-              <MyEditIcon className="w-5 h-5 text-gray-400 ml-2" />
+              {!field.disabled && <MyEditIcon className="w-5 h-5 text-gray-400 ml-2" />}
             </div>
           </div>
         ))}
@@ -108,14 +162,13 @@ export default function EditProfileScreen() {
 
       {/* Save button */}
       <div className="mt-8 px-4 md:px-40">
-        <button className="bg-green-700 w-full text-white py-3 rounded-full font-medium mt-8 text-center">
-          Appliquer les changements
+        <button
+          onClick={handleSave}
+          className={`bg-green-700 w-full text-white py-3 rounded-full font-medium mt-8 text-center ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
+          disabled={loading}
+        >
+          {loading ? 'Sauvegarde...' : 'Appliquer les changements'}
         </button>
-      </div>
-
-      {/* Shared bottom navbar */}
-      <div className="fixed bottom-0 left-0 right-0 md:hidden">
-        {/* <BottomNav /> */}
       </div>
     </div>
   );
