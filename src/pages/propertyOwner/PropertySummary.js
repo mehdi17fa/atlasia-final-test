@@ -29,10 +29,10 @@ export default function PropertySummary() {
       }
 
       try {
-       const res = await axios.get(
-  `${API_BASE}/api/property/${propertyData.propertyId}`,
-  { headers: { Authorization: `Bearer ${authToken}` } }
-);
+        const res = await axios.get(
+          `${API_BASE}/api/property/${propertyData.propertyId}`, // ✅ matches new route
+          { headers: { Authorization: `Bearer ${authToken}` } }
+        );
         setProperty(res.data.property);
       } catch (err) {
         console.error(err);
@@ -145,8 +145,7 @@ export default function PropertySummary() {
           <strong>Titre:</strong> {property.title || "Non renseigné"}
         </p>
         <p>
-          <strong>Description:</strong>{" "}
-          {property.description || "Non renseignée"}
+          <strong>Description:</strong> {property.description || "Non renseignée"}
         </p>
       </div>
 
@@ -163,11 +162,10 @@ export default function PropertySummary() {
 
       <button
         className="mt-6 w-full bg-green-800 text-white rounded-full py-3 font-semibold text-lg hover:bg-green-900 transition"
-        onClick={() => navigate(`/publish-property/${property._id}`)} // ✅
+        onClick={() => navigate(`/publish-property/${property._id}`)}
       >
         Terminer
       </button>
-
     </div>
   );
 }

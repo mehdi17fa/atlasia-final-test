@@ -63,7 +63,7 @@ export default function WelcomeOwner() {
         <SectionTitle title="Gérer mes propriétés" />
         <div className="flex gap-2 mb-4">
           <button className="bg-green-700 text-white px-4 py-2 rounded-full font-semibold text-sm shadow hover:bg-green-800 transition" onClick={() => navigate('/add-property')}>Ajouter propriété</button>
-          <button className="border border-green-800 text-green-700 px-4 py-2 rounded-full font-semibold text-sm bg-white hover:bg-green-800 transition" onClick={() => navigate('/list-property-owner')}>Voir mes propriétés</button>
+          <button className="border border-green-800 text-green-700 px-4 py-2 rounded-full font-semibold text-sm bg-white hover:bg-green-800 transition" onClick={() => navigate('/my-properties')}>Voir mes propriétés</button>
         </div>
         <SectionTitle title="Gérer mes réservations" />
         <div className="flex border-b border-gray-200 mb-4">

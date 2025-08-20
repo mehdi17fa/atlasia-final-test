@@ -6,7 +6,7 @@ import { AuthContext } from "../../context/AuthContext";
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 export default function PublishProperty() {
-  const { id } = useParams(); // property id from URL
+  const { id } = useParams();
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -16,16 +16,16 @@ export default function PublishProperty() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const authToken =
+    localStorage.getItem("accessToken") ||
+    localStorage.getItem("token") ||
+    user?.accessToken ||
+    user?.token;
+
   const handlePublish = async () => {
     setLoading(true);
     setError("");
     setSuccess("");
-
-    const authToken =
-      localStorage.getItem("accessToken") ||
-      localStorage.getItem("token") ||
-      user?.accessToken ||
-      user?.token;
 
     if (!authToken) {
       setError("Veuillez vous connecter pour publier.");
@@ -40,20 +40,45 @@ export default function PublishProperty() {
     }
 
     try {
-      const res = await axios.patch(
+      await axios.patch(
         `${API_BASE}/api/property/${id}/publish`,
         { start: startDate, end: endDate },
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
 
       setSuccess("Propriété publiée avec succès !");
-      // redirect to Explore or property page
-      setTimeout(() => navigate("/"), 1500);
+      setTimeout(() => navigate("/my-properties"), 1500);
     } catch (err) {
       console.error(err);
-      setError(
-        err?.response?.data?.message || "Erreur lors de la publication."
+      setError(err?.response?.data?.message || "Erreur lors de la publication.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    if (!authToken) {
+      setError("Veuillez vous connecter pour enregistrer en brouillon.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      await axios.patch(
+        `${API_BASE}/api/property/${id}`,
+        { status: "draft" },
+        { headers: { Authorization: `Bearer ${authToken}` } }
       );
+
+      setSuccess("Propriété sauvegardée en brouillon !");
+      setTimeout(() => navigate("/my-properties"), 1000);
+    } catch (err) {
+      console.error(err);
+      setError(err?.response?.data?.message || "Erreur lors de l'enregistrement.");
     } finally {
       setLoading(false);
     }
@@ -89,15 +114,27 @@ export default function PublishProperty() {
           className="w-full border p-2 rounded mb-4"
         />
 
-        <button
-          onClick={handlePublish}
-          disabled={loading}
-          className={`w-full py-3 rounded-full text-white font-semibold ${
-            loading ? "bg-gray-400" : "bg-green-800 hover:bg-green-900"
-          } transition`}
-        >
-          {loading ? "Publication..." : "Publier"}
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handlePublish}
+            disabled={loading}
+            className={`flex-1 py-3 rounded-full text-white font-semibold ${
+              loading ? "bg-gray-400" : "bg-green-800 hover:bg-green-900"
+            } transition`}
+          >
+            {loading ? "Publication..." : "Publier"}
+          </button>
+
+          <button
+            onClick={handleSaveDraft}
+            disabled={loading}
+            className={`flex-1 py-3 rounded-full text-white font-semibold ${
+              loading ? "bg-gray-400" : "bg-gray-700 hover:bg-gray-800"
+            } transition`}
+          >
+            {loading ? "Enregistrement..." : "Sauvegarder en brouillon"}
+          </button>
+        </div>
       </div>
     </div>
   );

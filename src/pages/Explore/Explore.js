@@ -13,10 +13,10 @@ export default function Explore() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchProperties = async () => {
+    const fetchPublishedProperties = async () => {
       try {
         const res = await axios.get(`${API_BASE}/api/property`);
-        setListings(res.data); // backend returns ready-to-render objects
+        setListings(res.data.properties || []);
       } catch (err) {
         console.error("Explore fetch error:", err);
         setListings([]);
@@ -25,7 +25,7 @@ export default function Explore() {
       }
     };
 
-    fetchProperties();
+    fetchPublishedProperties();
   }, []);
 
   const handleCardClick = (listing) => {
@@ -37,15 +37,16 @@ export default function Explore() {
   }
 
   if (listings.length === 0) {
-    return <div className="p-6 text-center text-gray-500">Aucune propriété disponible pour le moment.</div>;
+    return (
+      <div className="p-6 text-center text-gray-500">
+        Aucune propriété publiée disponible pour le moment.
+      </div>
+    );
   }
 
   return (
     <div className="px-4 py-6 max-w-6xl mx-auto">
-      <SectionTitle title="Options Populaires:" />
-      <ListingCardGrid listings={listings} onCardClick={handleCardClick} />
-
-      <SectionTitle title="Logement Downtown:" />
+      <SectionTitle title="Explorer les propriétés" />
       <ListingCardGrid listings={listings} onCardClick={handleCardClick} />
     </div>
   );
