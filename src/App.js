@@ -42,6 +42,8 @@ import PropertyDocumentsStep from './pages/propertyOwner/PropertyDocumentsStep';
 import PropertySummary from './pages/propertyOwner/PropertySummary';
 import PublishProperty from './pages/propertyOwner/PublishProperty';
 import MyProperties from './pages/propertyOwner/MyProperties';
+import PropertyPreview from './pages/Propriétés/PropertyPreview';
+import OwnerDetails from './pages/propertyOwner/OwnerDetails';
 
 // Intermédiaire
 import HomeIntermédiaire from './pages/Intermediate/Acceuil';
@@ -164,6 +166,8 @@ function App() {
         <Route path="/favorites" element={<Favorites />} />
         <Route path="/partner-welcome" element={<HomeIntermédiaire />} />
         <Route path="/VillaMakarska" element={<VillaMakarska />} />
+        <Route path="/property/:id" element={<PropertyPreview />} />
+        <Route path="/owner/:ownerId" element={<OwnerDetails />} />
 
         {/* Messages */}
         <Route path="/inbox" element={<Inbox />} />

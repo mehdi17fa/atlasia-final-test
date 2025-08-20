@@ -68,21 +68,22 @@ export default function Profile() {
         ))}
       </ul>
 
-      <div className="mt-6 text-center space-y-2">
-        <button
-          onClick={() => navigate('/edit-profile')}
-          className="bg-green-700 text-white py-2 px-6 rounded-full font-medium"
-        >
-          Modifier le profil
-        </button>
+      <div className="mt-6 text-center flex justify-center gap-4">
+  <button
+    onClick={() => navigate('/edit-profile')}
+    className="bg-green-700 text-white py-2 px-6 rounded-full font-medium"
+  >
+    Modifier le profil
+  </button>
 
-        <button
-          onClick={logout}
-          className="bg-red-500 hover:bg-red-600 text-white py-2 px-6 rounded-full font-medium"
-        >
-          Déconnexion
-        </button>
-      </div>
+  <button
+    onClick={logout}
+    className="bg-red-600 hover:bg-red-700 text-white py-2 px-6 rounded-full font-medium"
+  >
+    Déconnexion
+  </button>
+</div>
+
     </div>
   );
 }
