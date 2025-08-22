@@ -1,112 +1,66 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useContext } from 'react';
+import axios from 'axios';
+import { AuthContext } from '../context/AuthContext';
 import SectionTitle from '../components/shared/SectionTitle';
+
 const REQUIRED_DOCUMENTS = [
-  {
-    id: 'kbis',
-    name: 'KBIS (moins de 3 mois)',
-    description: 'Extrait KBIS de votre auto-entreprise daté de moins de 3 mois',
-    required: true,
-  },
-  {
-    id: 'identity',
-    name: 'Pièce d\'identité',
-    description: 'Carte nationale d\'identité, passeport ou permis de conduire',
-    required: true,
-  },
-  {
-    id: 'address',
-    name: 'Justificatif de domicile',
-    description: 'Facture (électricité, gaz, téléphone) ou attestation de domicile récente',
-    required: true,
-  },
-  {
-    id: 'insurance',
-    name: 'Attestation d\'assurance',
-    description: 'Attestation d\'assurance responsabilité civile professionnelle',
-    required: true,
-  },
+  { id: 'kbis', name: 'KBIS (moins de 3 mois)', description: 'Extrait KBIS de votre auto-entreprise daté de moins de 3 mois', required: true },
+  { id: 'identity', name: 'Pièce d\'identité', description: 'Carte nationale d\'identité, passeport ou permis de conduire', required: true },
+  { id: 'address', name: 'Justificatif de domicile', description: 'Facture ou attestation récente', required: true },
+  { id: 'insurance', name: 'Attestation d\'assurance', description: 'Attestation d\'assurance responsabilité civile professionnelle', required: true },
 ];
 
 const ACCEPTED_FORMATS = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export default function DocumentUpload() {
+  const { token } = useContext(AuthContext);
   const [documents, setDocuments] = useState({});
   const [uploadProgress, setUploadProgress] = useState({});
   const [errors, setErrors] = useState({});
   const [dragOver, setDragOver] = useState(null);
-  const [previewDocument, setPreviewDocument] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(null);
 
-  // ✅ Cleanup object URLs on unmount
   useEffect(() => {
     return () => {
-      Object.values(documents).forEach((doc) => {
-        if (doc?.previewUrl) URL.revokeObjectURL(doc.previewUrl);
+      Object.values(documents).forEach(files => {
+        files.forEach(doc => doc?.previewUrl && URL.revokeObjectURL(doc.previewUrl));
       });
     };
   }, [documents]);
 
   const validateFile = (file) => {
-    const extension = file.name.split('.').pop().toLowerCase();
-    if (!ACCEPTED_FORMATS.includes(extension)) {
-      return `Format non supporté. Formats acceptés: ${ACCEPTED_FORMATS.join(', ').toUpperCase()}`;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return 'Fichier trop volumineux. Taille maximum: 10MB';
-    }
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!ACCEPTED_FORMATS.includes(ext)) return `Format non supporté: ${ACCEPTED_FORMATS.join(', ').toUpperCase()}`;
+    if (file.size > MAX_FILE_SIZE) return 'Fichier trop volumineux. Max: 10MB';
     return null;
   };
 
-  const simulateUpload = (file, documentId) => {
-    return new Promise((resolve, reject) => {
-      let progress = 0;
-      const interval = setInterval(() => {
-        progress += Math.random() * 30;
-        if (progress >= 100) {
-          progress = 100;
-          clearInterval(interval);
-          setUploadProgress((prev) => ({ ...prev, [documentId]: 100 }));
-          Math.random() > 0.9 ? reject(new Error('Erreur réseau. Veuillez réessayer.')) : resolve();
-        } else {
-          setUploadProgress((prev) => ({ ...prev, [documentId]: Math.floor(progress) }));
-        }
-      }, 200);
-    });
-  };
+  const handleFileSelect = useCallback((files, documentId) => {
+    const newDocs = Array.from(files).map(file => {
+      const error = validateFile(file);
+      if (error) {
+        setErrors(prev => ({ ...prev, [documentId]: error }));
+        return null;
+      }
+      return {
+        file,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        previewUrl: URL.createObjectURL(file),
+      };
+    }).filter(Boolean);
 
-  const handleFileSelect = useCallback(async (files, documentId) => {
-    const file = files[0];
-    if (!file) return;
+    if (newDocs.length === 0) return;
 
-    const error = validateFile(file);
-    if (error) {
-      setErrors((prev) => ({ ...prev, [documentId]: error }));
-      return;
-    }
-
-    setErrors((prev) => ({ ...prev, [documentId]: null }));
-    setUploadProgress((prev) => ({ ...prev, [documentId]: 0 }));
-
-    try {
-      await simulateUpload(file, documentId);
-      const previewUrl = URL.createObjectURL(file);
-      setDocuments((prev) => ({
-        ...prev,
-        [documentId]: {
-          file,
-          name: file.name,
-          size: file.size,
-          type: file.type,
-          previewUrl,
-          uploaded: true,
-        },
-      }));
-    } catch (error) {
-      setErrors((prev) => ({ ...prev, [documentId]: error.message }));
-      setUploadProgress((prev) => ({ ...prev, [documentId]: 0 }));
-    }
+    setErrors(prev => ({ ...prev, [documentId]: null }));
+    setDocuments(prev => ({
+      ...prev,
+      [documentId]: [...(prev[documentId] || []), ...newDocs],
+    }));
   }, []);
 
   const handleDrop = useCallback((e, documentId) => {
@@ -125,39 +79,15 @@ export default function DocumentUpload() {
     setDragOver(null);
   }, []);
 
-  const removeDocument = (documentId) => {
-    setDocuments((prev) => {
-      const newDocs = { ...prev };
-      if (newDocs[documentId]?.previewUrl) {
-        URL.revokeObjectURL(newDocs[documentId].previewUrl);
-      }
-      delete newDocs[documentId];
-      return newDocs;
+  const removeDocument = (documentId, index) => {
+    setDocuments(prev => {
+      const newDocs = [...(prev[documentId] || [])];
+      newDocs[index]?.previewUrl && URL.revokeObjectURL(newDocs[index].previewUrl);
+      newDocs.splice(index, 1);
+      return { ...prev, [documentId]: newDocs };
     });
-    setErrors((prev) => ({ ...prev, [documentId]: null }));
-    setUploadProgress((prev) => ({ ...prev, [documentId]: 0 }));
-  };
-
-  const getFileIcon = (file) => {
-    if (file.type.startsWith('image/')) {
-      return (
-        <div className="w-8 h-8 bg-atlasia-sage rounded flex items-center justify-center">
-          <span className="text-atlasia-dark font-bold text-lg">IMG</span>
-        </div>
-      );
-    }
-    if (file.type === 'application/pdf') {
-      return (
-        <div className="w-8 h-8 bg-atlasia-sage rounded flex items-center justify-center">
-          <span className="text-atlasia-dark font-bold text-lg">PDF</span>
-        </div>
-      );
-    }
-    return (
-      <div className="w-8 h-8 bg-atlasia-sage rounded flex items-center justify-center">
-        <span className="text-atlasia-dark font-bold text-lg">DOC</span>
-      </div>
-    );
+    setErrors(prev => ({ ...prev, [documentId]: null }));
+    setUploadProgress(prev => ({ ...prev, [documentId]: 0 }));
   };
 
   const formatFileSize = (bytes) => {
@@ -168,37 +98,85 @@ export default function DocumentUpload() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const canSubmit = REQUIRED_DOCUMENTS.every((doc) => documents[doc.id]?.uploaded);
+  const canSubmit = REQUIRED_DOCUMENTS.every(doc => documents[doc.id]?.length > 0);
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-    setIsSubmitting(false);
-    setSubmitted(true);
+    setSubmitError(null);
+
+    try {
+      const formData = new FormData();
+      const documentTypes = [];
+
+      // Add files and build documentTypes array in the same order
+      REQUIRED_DOCUMENTS.forEach(reqDoc => {
+        if (documents[reqDoc.id] && documents[reqDoc.id].length > 0) {
+          documents[reqDoc.id].forEach(doc => {
+            formData.append("files", doc.file);
+            documentTypes.push(reqDoc.id);
+          });
+        }
+      });
+
+      // Backend expects documentTypes as an array, not JSON string
+      documentTypes.forEach(type => {
+        formData.append("documentTypes", type);
+      });
+
+      console.log("Submitting with documentTypes:", documentTypes);
+      console.log("FormData entries:");
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + (pair[1].name || pair[1]));
+      }
+
+      const response = await axios.post(
+        "http://localhost:4000/api/documents/upload",
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${token}`
+          },
+          onUploadProgress: progressEvent => {
+            const percent = Math.floor((progressEvent.loaded / progressEvent.total) * 100);
+            Object.keys(documents).forEach(docId =>
+              setUploadProgress(prev => ({ ...prev, [docId]: percent }))
+            );
+          }
+        }
+      );
+
+      console.log("Upload successful:", response.data);
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Submit error:", err);
+      console.error("Response data:", err.response?.data);
+      const errorMessage = err.response?.data?.message || "Erreur lors de l'envoi des documents.";
+      setSubmitError(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleBack = () => {
-    window.history.back();
-  };
-
-  const openPreview = (document) => setPreviewDocument(document);
-  const closePreview = () => setPreviewDocument(null);
+  const handleBack = () => window.history.back();
 
   if (submitted) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-atlasia-sage rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-atlasia-dark text-3xl">✓</span>
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Documents envoyés !</h2>
-          <p className="text-gray-600 mb-6">Vos documents ont été envoyés avec succès. Notre équipe les examinera dans les 24-48h.</p>
-          <button
-            onClick={() => window.location.href = '/dashboard'}
-            className="w-full bg-atlasia-dark text-white py-3 px-4 rounded-xl font-medium hover:bg-atlasia-sage transition-colors"
+          <p className="text-gray-600 mb-6">Vos documents ont été envoyés avec succès et sont en cours de vérification.</p>
+          <button 
+            onClick={() => window.location.href = '/dashboard'} 
+            className="w-full bg-green-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-green-700 transition-colors"
           >
-            Continuer
+            Continuer vers le tableau de bord
           </button>
         </div>
       </div>
@@ -208,49 +186,45 @@ export default function DocumentUpload() {
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
       <div className="max-w-4xl mx-auto relative">
-        <button
-          onClick={handleBack}
-          className="absolute top-0 left-0 p-2 bg-atlasia-dark text-white rounded-full hover:bg-atlasia-sage transition-colors"
+        <button 
+          onClick={handleBack} 
+          className="absolute top-0 left-0 p-2 bg-gray-800 text-white rounded-full hover:bg-gray-700 transition-colors" 
           title="Retour"
         >
           <div className="w-6 h-6 flex items-center justify-center">
-            <span className="text-xl">✕</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
           </div>
         </button>
+        
         <div className="text-center mb-8">
           <SectionTitle title="Vérification de votre compte" />
-          <p className="text-gray-600 max-w-2xl mx-auto">Pour activer votre compte auto-entrepreneur, veuillez télécharger les documents suivants. Tous les documents sont obligatoires.</p>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Pour activer votre compte auto-entrepreneur, veuillez télécharger les documents suivants.
+          </p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Documents requis ({Object.keys(documents).filter((key) => documents[key]?.uploaded).length}/{REQUIRED_DOCUMENTS.length})
-          </h2>
-          <div className="space-y-3">
-            {REQUIRED_DOCUMENTS.map((doc) => {
-              const isCompleted = documents[doc.id]?.uploaded;
-              return (
-                <div key={doc.id} className="flex items-center space-x-3">
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${isCompleted ? 'bg-atlasia-sage text-atlasia-dark' : 'bg-gray-100 text-gray-400'}`}>
-                    {isCompleted ? (
-                      <span className="text-sm">✓</span>
-                    ) : (
-                      <div className="w-2 h-2 rounded-full bg-current" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className={`font-medium ${isCompleted ? 'text-atlasia-dark' : 'text-gray-700'}`}>{doc.name}</p>
-                    <p className="text-sm text-gray-500">{doc.description}</p>
-                  </div>
-                </div>
-              );
-            })}
+        {/* Debug Info */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
+            <h4 className="font-semibold text-green-800 mb-2">Debug Info:</h4>
+            {/* <p className="text-sm text-green-600">Token: {token ? 'Present' : 'Missing'}</p> */}
+            <p className="text-sm text-green-600">Documents ready: {Object.keys(documents).length}/4</p>
+            <p className="text-sm text-green-600">Can submit: {canSubmit ? 'Yes' : 'No'}</p>
           </div>
-        </div>
+        )}
+
+        {submitError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 font-medium">Erreur d'envoi:</p>
+            <p className="text-red-600 text-sm">{submitError}</p>
+          </div>
+        )}
 
         <div className="space-y-6">
-          {REQUIRED_DOCUMENTS.map((doc) => {
-            const document = documents[doc.id];
+          {REQUIRED_DOCUMENTS.map(doc => {
+            const docFiles = documents[doc.id] || [];
             const progress = uploadProgress[doc.id];
             const error = errors[doc.id];
             const isDragOver = dragOver === doc.id;
@@ -262,160 +236,111 @@ export default function DocumentUpload() {
                     <h3 className="text-lg font-semibold text-gray-900">{doc.name}</h3>
                     <p className="text-sm text-gray-600">{doc.description}</p>
                   </div>
-                  {document?.uploaded && (
-                    <div className="w-6 h-6 bg-atlasia-sage rounded-full flex items-center justify-center text-atlasia-dark">
-                      <span className="text-sm">✓</span>
+                  {docFiles.length > 0 && (
+                    <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-600">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
                     </div>
                   )}
                 </div>
 
-                {!document ? (
-                  <div
-                    className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${isDragOver ? 'border-atlasia-dark bg-atlasia-sage/20' : 'border-gray-300 hover:border-gray-400'}`}
-                    onDrop={(e) => handleDrop(e, doc.id)}
-                    onDragOver={(e) => handleDragOver(e, doc.id)}
-                    onDragLeave={handleDragLeave}
+                <div
+                  className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors ${
+                    isDragOver 
+                      ? 'border-green-500 bg-green-50' 
+                      : 'border-gray-300 hover:border-gray-400'
+                  }`}
+                  onDrop={e => handleDrop(e, doc.id)}
+                  onDragOver={e => handleDragOver(e, doc.id)}
+                  onDragLeave={handleDragLeave}
+                >
+                  <input 
+                    type="file" 
+                    multiple 
+                    accept=".pdf,.jpg,.jpeg,.png,.doc,.docx" 
+                    onChange={e => handleFileSelect(e.target.files, doc.id)} 
+                    className="hidden" 
+                    id={`file-${doc.id}`} 
+                  />
+                  <label 
+                    htmlFor={`file-${doc.id}`} 
+                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 cursor-pointer transition-colors"
                   >
-                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
-                      <span className="text-2xl">↑</span>
-                    </div>
-                    <p className="text-lg font-medium text-gray-700 mb-2">Glissez-déposez votre fichier ici</p>
-                    <p className="text-sm text-gray-500 mb-4">ou cliquez pour sélectionner</p>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
-                      onChange={(e) => handleFileSelect(e.target.files, doc.id)}
-                      className="hidden"
-                      id={`file-${doc.id}`}
-                    />
-                    <label
-                      htmlFor={`file-${doc.id}`}
-                      className="inline-flex items-center px-4 py-2 bg-atlasia-dark text-white rounded-lg hover:bg-atlasia-sage cursor-pointer transition-colors"
-                    >
-                      Sélectionner un fichier
-                    </label>
-                    <p className="text-xs text-gray-500 mt-2">PDF, JPG, PNG, DOC - Max 10MB</p>
-                  </div>
-                ) : (
-                  <div className="border rounded-xl p-4">
+                    Sélectionner un ou plusieurs fichiers
+                  </label>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Ou glisser-déposer ici • Formats: PDF, JPG, PNG, DOC • Max: 10MB
+                  </p>
+                </div>
+
+                {docFiles.length > 0 && docFiles.map((document, index) => (
+                  <div key={index} className="border rounded-xl p-4 mt-3">
                     <div className="flex items-center space-x-4">
-                      {getFileIcon(document)}
-                      <div className="flex-1 min-w-0">
+                      <div>
+                        {document.type?.startsWith('image/') ? (
+                          <img 
+                            src={document.previewUrl} 
+                            alt="" 
+                            className="w-12 h-12 object-cover rounded" 
+                          />
+                        ) : (
+                          <div className="w-12 h-12 bg-gray-200 flex items-center justify-center rounded text-gray-500 font-semibold">
+                            DOC
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1">
                         <p className="font-medium text-gray-900 truncate">{document.name}</p>
                         <p className="text-sm text-gray-500">{formatFileSize(document.size)}</p>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={() => openPreview(document)}
-                          className="p-2 text-atlasia-dark hover:text-atlasia-sage transition-colors"
-                          title="Prévisualiser"
-                        >
-                          <div className="w-5 h-5 flex items-center justify-center">
-                            <span className="text-lg">👁</span>
-                          </div>
-                        </button>
-                        <button
-                          onClick={() => removeDocument(doc.id)}
-                          className="p-2 text-atlasia-dark hover:text-atlasia-sage transition-colors"
-                          title="Supprimer"
-                        >
-                          <div className="w-5 h-5 flex items-center justify-center">
-                            <span className="text-lg">✕</span>
-                          </div>
-                        </button>
-                      </div>
+                      <button 
+                        onClick={() => removeDocument(doc.id, index)} 
+                        className="p-2 text-red-500 hover:text-red-700 transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
                     </div>
-                    {progress > 0 && progress < 100 && (
-                      <div className="mt-3">
-                        <div className="flex justify-between text-sm text-gray-600 mb-1">
-                          <span>Téléchargement...</span>
-                          <span>{progress}%</span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div
-                            className="bg-atlasia-dark h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
+                  </div>
+                ))}
+
+                {progress > 0 && progress < 100 && (
+                  <div className="mt-3 w-full bg-gray-200 h-2 rounded-full">
+                    <div 
+                      className="bg-green-600 h-2 rounded-full transition-all" 
+                      style={{ width: `${progress}%` }} 
+                    />
                   </div>
                 )}
 
-                {error && (
-                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
-                    <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center text-red-600">
-                      <span className="text-sm">!</span>
-                    </div>
-                    <p className="text-sm text-red-700">{error}</p>
-                  </div>
-                )}
+                {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
               </div>
             );
           })}
         </div>
 
         <div className="mt-8 text-center">
-          <button
-            onClick={handleSubmit}
-            disabled={!canSubmit || isSubmitting}
+          <button 
+            onClick={handleSubmit} 
+            disabled={!canSubmit || isSubmitting} 
             className={`px-8 py-4 rounded-xl font-semibold text-lg transition-all ${
-              canSubmit && !isSubmitting
-                ? 'bg-atlasia-dark text-white hover:bg-atlasia-sage shadow-lg'
+              canSubmit && !isSubmitting 
+                ? 'bg-green-600 text-white hover:bg-green-700 shadow-lg' 
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
             {isSubmitting ? 'Envoi en cours...' : 'Envoyer les documents'}
           </button>
+          
           {!canSubmit && (
             <p className="text-sm text-gray-500 mt-2">
-              Veuillez télécharger tous les documents requis avant de continuer
+              Veuillez ajouter au moins un fichier pour chaque type de document requis
             </p>
           )}
         </div>
       </div>
-
-      {previewDocument && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50"
-          role="dialog"
-          aria-modal="true"
-        >
-          <div className="bg-white rounded-2xl max-w-4xl max-h-full w-full overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h3 className="text-lg font-semibold">{previewDocument.name}</h3>
-              <button
-                onClick={closePreview}
-                className="p-2 bg-atlasia-dark text-white rounded-full hover:bg-atlasia-sage transition-colors"
-              >
-                <div className="w-6 h-6 flex items-center justify-center">
-                  <span className="text-xl">✕</span>
-                </div>
-              </button>
-            </div>
-            <div className="p-4 max-h-96 overflow-auto">
-              {previewDocument.type.startsWith('image/') ? (
-                <img
-                  src={previewDocument.previewUrl}
-                  alt="Preview"
-                  className="w-full h-auto rounded-lg"
-                />
-              ) : (
-                <div className="text-center py-12">
-                  {getFileIcon(previewDocument)}
-                  <p className="text-gray-600 mt-4">Aperçu non disponible pour ce type de fichier</p>
-                  <p className="text-sm text-gray-500">
-                    {previewDocument.name} - {formatFileSize(previewDocument.size)}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
-
-
-
