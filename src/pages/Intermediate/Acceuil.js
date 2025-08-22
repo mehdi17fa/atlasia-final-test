@@ -7,7 +7,7 @@ export default function HomeIntermédiaire() {
       {/* Header */}
       <div className="p-4 md:p-8">
         <h1 className="text-green-700 font-bold text-xl md:text-2xl">Atlasia</h1>
-        <h2 className="mt-2 text-xl md:text-2xl font-semibold">Bienvenue Khadeja:</h2>
+        <h2 className="mt-2 text-xl md:text-2xl font-semibold">Bienvenue Snowfall:</h2>
       </div>
 
       {/* Hosting section */}

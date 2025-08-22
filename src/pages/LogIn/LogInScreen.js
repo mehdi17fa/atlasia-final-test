@@ -36,7 +36,7 @@ export default function LoginScreen() {
 
       // Navigate based on role
       if (response.data.user.role === 'owner') navigate('/owner-welcome');
-      else if (response.data.user.role === 'partner') navigate('/partner-dashboard');
+      else if (response.data.user.role === 'partner') navigate('/partner-welcome');
       else navigate('/profile');
 
     } catch (err) {
