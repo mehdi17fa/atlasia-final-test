@@ -65,6 +65,7 @@ import GuestsSelectionScreen from './pages/UserSearch/Invités';
 import ExploreLayout from './pages/Layout/Layout';
 import VillaMakarska from './pages/Propriétés/VillaMakarska';
 import EditProfileScreen from './pages/Profile/EditProfile';
+import DocumentUpload from './utilities/DocumentUpload';
 
 // Explore affiché en fond avec modal devant
 function ModalLayout({ children }) {
@@ -199,7 +200,10 @@ function App() {
         <Route path="/select-property" element={<SelectPropertyStep />} />
         {/* <Route path="/select-res" element={<SelectResStep />} /> */}
         {/* <Route path="/package-name" element={<PackageNameStep />} />
+        
         <Route path="/package-price" element={<PackagePriceStep />} /> */}
+
+        <Route path="/data" element={<DocumentUpload />} />
       </Routes>
 
       <ConditionalNavbar />
