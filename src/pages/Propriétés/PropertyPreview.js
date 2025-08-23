@@ -52,6 +52,14 @@ export default function PropertyPreview() {
 
   const mapImage = "/map-placeholder.jpg";
 
+  // 🔧 FIX: Transform owner data to match PropertyLayout expectations
+  const hostData = property.owner ? {
+    id: property.owner._id, // Convert _id to id for the button
+    name: property.owner.displayName || property.owner.fullName || property.owner.name || 'Nom non disponible',
+    photo: property.owner.profilePic || property.owner.profileImage, // Handle both possible field names
+    email: property.owner.email
+  } : null;
+
   return (
     <PropertyLayout
       title={property.title}
@@ -59,7 +67,7 @@ export default function PropertyPreview() {
       rating={5}
       reviewCount={property.reviews?.length || 0}
       mainImage={property.photos?.[0] || "/placeholder1.jpg"}
-      host={property.owner || null}
+      host={hostData}
       checkInTime="15:00"
       features={features}
       associatedPacks={associatedPacks}
