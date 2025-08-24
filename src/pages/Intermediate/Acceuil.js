@@ -1,7 +1,18 @@
 import React from 'react';
-
+import { useNavigate } from 'react-router-dom';
 
 export default function HomeIntermédiaire() {
+  const navigate = useNavigate();
+
+  const handleDevenirCoHote = () => {
+    navigate('/cohosting-explore');
+  };
+
+  const handleGererHosting = () => {
+    // Navigate to manage hosting page
+    navigate('/hosting/manage');
+  };
+
   return (
     <div className="min-h-screen bg-white text-gray-900">
       {/* Header */}
@@ -14,8 +25,18 @@ export default function HomeIntermédiaire() {
       <div className="px-4 md:px-8 mt-2">
         <h3 className="text-lg font-semibold text-green-800">Hostings</h3>
         <div className="flex gap-2 mt-2 flex-wrap">
-          <button className="bg-green-700 text-white px-4 py-2 rounded-full text-sm">Devenir co-hôte</button>
-          <button className="border border-black text-black px-4 py-2 rounded-full text-sm">Gérer mes hosting</button>
+          <button 
+            onClick={handleDevenirCoHote}
+            className="bg-green-700 text-white px-4 py-2 rounded-full text-sm hover:bg-green-800 transition-colors"
+          >
+            Devenir co-hôte
+          </button>
+          <button 
+            onClick={handleGererHosting}
+            className="border border-black text-black px-4 py-2 rounded-full text-sm hover:bg-gray-50 transition-colors"
+          >
+            Gérer mes hosting
+          </button>
         </div>
       </div>
 

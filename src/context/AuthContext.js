@@ -9,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   // Load from localStorage on mount
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
-    const storedToken = localStorage.getItem('token');
+    const storedToken = localStorage.getItem('accessToken'); // ✅ Changed to accessToken
     if (storedUser) {
       try {
         setUser(JSON.parse(storedUser));
@@ -26,17 +26,25 @@ export const AuthProvider = ({ children }) => {
 
   // Login function
   const login = (userData, jwtToken) => {
+    console.log("🔄 AuthContext login called with:", { userData, token: jwtToken ? "EXISTS" : "MISSING" });
+    
     setUser(userData);
     setToken(jwtToken);
     localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('token', jwtToken); // ← store token
+    localStorage.setItem('accessToken', jwtToken); // ✅ Changed to accessToken
+    
+    // Also store refreshToken if it exists in the response
+    // You might need to pass refreshToken as a third parameter
+    
+    console.log("✅ Tokens stored in localStorage");
   };
 
   const logout = () => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken'); // ✅ Changed to accessToken
+    localStorage.removeItem('refreshToken'); // ✅ Also remove refresh token
   };
 
   return (
