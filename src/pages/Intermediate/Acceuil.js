@@ -9,8 +9,7 @@ export default function HomeIntermédiaire() {
   };
 
   const handleGererHosting = () => {
-    // Navigate to manage hosting page
-    navigate('/hosting/manage');
+    navigate('/partner/cohosting-management');
   };
 
   return (

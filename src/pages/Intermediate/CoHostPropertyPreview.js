@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import CoHostPropertyLayout from "../Layout/CohostPropertyLayout";
 import { AuthContext } from "../../context/AuthContext";
+import toast, { Toaster } from "react-hot-toast";
 
 import { ReactComponent as BedIcon } from '../../assets/icons/bed.svg';
 import { ReactComponent as GuestsIcon } from '../../assets/icons/invité.svg';
@@ -22,6 +23,7 @@ export default function CoHostPropertyPreview() {
 
   const [property, setProperty] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [requestSent, setRequestSent] = useState(false);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -51,7 +53,6 @@ export default function CoHostPropertyPreview() {
   if (loading) return <p className="text-center mt-20">Chargement...</p>;
   if (!property) return <p className="text-center mt-20">Propriété introuvable.</p>;
 
-  // ✅ Transform property data into PropertyLayout-friendly format
   const features = [
     { icon: <BedIcon className="w-7 h-7 text-gray-600" />, label: `${property.info?.bedrooms || 0} chambres` },
     { icon: <GuestsIcon className="w-7 h-7 text-gray-600" />, label: `${property.info?.guests || 0} invités` },
@@ -78,20 +79,55 @@ export default function CoHostPropertyPreview() {
     email: property.owner.email
   } : null;
 
+  // ✅ Function to request co-hosting
+  const handleCoHostClick = async () => {
+    if (!user) {
+      toast.error("Vous devez être connecté pour devenir co-hôte");
+      return;
+    }
+
+    if (requestSent) {
+      toast("Demande déjà envoyée", { icon: "ℹ️" });
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await axios.post(
+        `${API_BASE}/api/partner/request/${propertyId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      if (res.data.success) {
+        setRequestSent(true);
+        toast.success("Demande envoyée avec succès ! L'e-mail a été envoyé au propriétaire.");
+      }
+    } catch (err) {
+      console.error("❌ Error sending cohost request:", err);
+      const msg = err.response?.data?.message || "Erreur lors de l'envoi de la demande";
+      toast.error(msg);
+    }
+  };
+
   return (
-    <CoHostPropertyLayout
-      title={property.title}
-      location={`${property.localisation?.city || ""}${property.localisation?.address ? ", " + property.localisation.address : ""}`}
-      rating={5}
-      reviewCount={property.reviews?.length || 0}
-      mainImage={property.photos?.[0] || "/placeholder1.jpg"}
-      host={hostData}
-      checkInTime="15:00"
-      features={features}
-      associatedPacks={associatedPacks}
-      mapImage={mapImage}
-      reviews={property.reviews || []}
-      user={user}
-    />
+    <>
+      <Toaster position="top-right" reverseOrder={false} />
+      <CoHostPropertyLayout
+        title={property.title}
+        location={`${property.localisation?.city || ""}${property.localisation?.address ? ", " + property.localisation.address : ""}`}
+        rating={5}
+        reviewCount={property.reviews?.length || 0}
+        mainImage={property.photos?.[0] || "/placeholder1.jpg"}
+        host={hostData}
+        checkInTime="15:00"
+        features={features}
+        associatedPacks={associatedPacks}
+        mapImage={mapImage}
+        reviews={property.reviews || []}
+        user={user}
+        onCoHostClick={handleCoHostClick}
+      />
+    </>
   );
 }
