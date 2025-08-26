@@ -13,37 +13,50 @@ export default function LoginScreen() {
   const validateEmail = (email) =>
     /^[a-zA-Z0-9._%+-]+@gmail\.com$/.test(email);
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      setError('All fields are required.');
-      return;
-    }
-
-    if (!validateEmail(email)) {
-      setError('Email must be in format: example@gmail.com');
-      return;
-    }
-
-    try {
-      setError('');
-      const response = await axios.post('http://localhost:4000/api/auth/login', {
-        email,
-        password
-      });
-
-      // Update global auth state and store token
-      login(response.data.user, response.data.accessToken);
-
-      // Navigate based on role
-      if (response.data.user.role === 'owner') navigate('/owner-welcome');
-      else if (response.data.user.role === 'partner') navigate('/partner-welcome');
-      else navigate('/profile');
-
-    } catch (err) {
-      console.error('Login error:', err.response?.data || err.message);
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
-    }
-  };
+    const handleLogin = async () => {
+      if (!email || !password) {
+        setError('All fields are required.');
+        return;
+      }
+    
+      if (!validateEmail(email)) {
+        setError('Email must be in format: example@gmail.com');
+        return;
+      }
+    
+      try {
+        setError('');
+        const response = await axios.post('http://localhost:4000/api/auth/login', {
+          email,
+          password
+        });
+    
+        console.log("✅ Login response:", response.data);
+    
+        // Store refreshToken directly (since login function only handles accessToken)
+        if (response.data.refreshToken) {
+          localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
+    
+        // Update global auth state and store accessToken
+        login(response.data.user, response.data.accessToken);
+    
+        // Verify tokens are stored
+        console.log("🔍 Stored tokens:", {
+          accessToken: !!localStorage.getItem('accessToken'),
+          refreshToken: !!localStorage.getItem('refreshToken')
+        });
+    
+        // Navigate based on role
+        if (response.data.user.role === 'owner') navigate('/owner-welcome');
+        else if (response.data.user.role === 'partner') navigate('/partner-welcome');
+        else navigate('/profile');
+    
+      } catch (err) {
+        console.error('Login error:', err.response?.data || err.message);
+        setError(err.response?.data?.message || 'Login failed. Please try again.');
+      }
+    };
 
   const handleClose = () => {
     navigate('/');

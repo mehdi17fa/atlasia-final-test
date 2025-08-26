@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import {
   BrowserRouter as Router,
@@ -49,9 +47,13 @@ import OwnerDetails from './pages/propertyOwner/OwnerDetails';
 import HomeIntermédiaire from './pages/Intermediate/Acceuil';
 import CreatePackage from './pages/Intermediate/CreatePackage';
 import SelectPropertyStep from './pages/Intermediate/SelectPropertyStep';
+import CohostingExplore from './pages/Explore/CohostingExplore';
+import CoHostPropertyPreview from './pages/Intermediate/CoHostPropertyPreview'; 
+import PartnerCohostingManagement from './pages/Intermediate/PartnerCohostingManagement';
 // import SelectResStep from './pages/Intermediate/SelectResStep';
 // import PackageNameStep from './pages/Intermediate/PackageNameStep';
 // import PackagePriceStep from './pages/Intermediate/PackagePriceStep';
+import PackageCreationFlow from './pages/Intermediate/PackageCreationFlow';
 
 // Inbox / Chat
 import Inbox from './pages/Inbox/Inbox';
@@ -168,7 +170,12 @@ function App() {
         <Route path="/partner-welcome" element={<HomeIntermédiaire />} />
         <Route path="/VillaMakarska" element={<VillaMakarska />} />
         <Route path="/property/:id" element={<PropertyPreview />} />
-        <Route path="/owner/:ownerId" element={<OwnerDetails />} />
+        <Route path="/owner/:ownerId" element={<CoHostPropertyPreview />} />
+
+        {/* Co-hosting routes - ADD THIS SECTION */}
+        <Route path="/cohosting-explore" element={<CohostingExplore />} />
+        <Route path="/cohosting-preview/:propertyId" element={<CoHostPropertyPreview />} />
+        <Route path="/partner/cohosting-management" element={<PartnerCohostingManagement />} />
 
         {/* Messages */}
         <Route path="/inbox" element={<Inbox />} />
@@ -196,7 +203,7 @@ function App() {
         <Route path="/my-properties" element={<MyProperties />} />
 
         {/* Intermediate */}
-        <Route path="/create-package" element={<CreatePackage />} />
+        <Route path="/create-package" element={<PackageCreationFlow />} />
         <Route path="/select-property" element={<SelectPropertyStep />} />
         {/* <Route path="/select-res" element={<SelectResStep />} /> */}
         {/* <Route path="/package-name" element={<PackageNameStep />} />
