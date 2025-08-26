@@ -7,26 +7,69 @@ import Calendar from "../../components/shared/Calendar";
 import OwnerBottomNavbar from "../../components/shared/NavbarPropriétaire";
 import { AuthContext } from "../../context/AuthContext";
 import toast, { Toaster } from "react-hot-toast";
+import { 
+  PlusIcon, 
+  HomeIcon, 
+  CalendarDaysIcon, 
+  ClockIcon,
+  ArrowPathIcon,
+  CheckIcon,
+  XMarkIcon,
+  SparklesIcon,
+  MapPinIcon,
+  EyeIcon
+} from '@heroicons/react/24/outline';
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
-// Mock data - replace with real data from your API
-const properties = [
-  {
-    id: 1,
-    name: "Appartement Zephire",
-    description: "Un bel appartement lumineux au centre d'Ifrane, proche de toutes commodités.",
-    location: "Ifrane - Downtown",
-    image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80"
-  },
-  {
-    id: 2,
-    name: "Villa Makarska",
-    description: "Villa spacieuse avec piscine privée et grand jardin.",
-    location: "Ifrane - Downtown",
-    image: "https://images.unsplash.com/photo-1465101046530-73398c7f28ca?auto=format&fit=crop&w=400&q=80"
-  }
-];
+// Property Grid Card Component
+function PropertyGridCard({ property, onClick }) {
+  return (
+    <div 
+      className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden cursor-pointer hover:shadow-md transition-all duration-300 hover:-translate-y-1"
+      onClick={() => onClick(property)}
+    >
+      <div className="relative h-48 bg-gray-200">
+        {property.image ? (
+          <img
+            src={property.image}
+            alt={property.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+            <HomeIcon className="w-12 h-12 text-gray-400" />
+          </div>
+        )}
+        <div className="absolute top-2 right-2">
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+            property.status === 'published' 
+              ? 'bg-green-100 text-green-800' 
+              : property.status === 'draft'
+              ? 'bg-yellow-100 text-yellow-800'
+              : 'bg-gray-100 text-gray-800'
+          }`}>
+            {property.status === 'published' ? '🌟 Publié' : 
+             property.status === 'draft' ? '📝 Brouillon' : 
+             property.status}
+          </span>
+        </div>
+      </div>
+      <div className="p-4">
+        <h3 className="font-semibold text-gray-900 mb-1 line-clamp-1">
+          {property.title || "Titre non défini"}
+        </h3>
+        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+          {property.description || "Description non disponible"}
+        </p>
+        <div className="flex items-center text-xs text-gray-500">
+          <MapPinIcon className="w-4 h-4 mr-1" />
+          <span className="line-clamp-1">{property.location || "Localisation non définie"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function CoHostRequestCard({ request, onAccept, onReject, loading, isHighlighted = false }) {
   return (
@@ -35,7 +78,8 @@ function CoHostRequestCard({ request, onAccept, onReject, loading, isHighlighted
     }`}>
       {isHighlighted && (
         <div className="bg-green-600 text-white text-xs px-2 py-1 rounded-full inline-block mb-2 font-semibold">
-          ✨ Nouvelle demande
+          <SparklesIcon className="w-3 h-3 inline mr-1" />
+          Nouvelle demande
         </div>
       )}
       <div className="flex items-start space-x-4">
@@ -66,8 +110,9 @@ function CoHostRequestCard({ request, onAccept, onReject, loading, isHighlighted
                     <p className="text-sm font-medium text-green-700">
                       {request.property?.title || "Titre non disponible"}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      📍 {request.property?.localisation?.city || "Localisation non spécifiée"}
+                    <p className="text-xs text-gray-500 flex items-center">
+                      <MapPinIcon className="w-3 h-3 mr-1" />
+                      {request.property?.localisation?.city || "Localisation non spécifiée"}
                       {request.property?.localisation?.address && `, ${request.property.localisation.address}`}
                     </p>
                   </div>
@@ -78,22 +123,33 @@ function CoHostRequestCard({ request, onAccept, onReject, loading, isHighlighted
               <button
                 onClick={() => onAccept(request._id)}
                 disabled={loading}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center"
               >
-                {loading ? "..." : "✓ Accepter"}
+                {loading ? "..." : (
+                  <>
+                    <CheckIcon className="w-4 h-4 mr-1" />
+                    Accepter
+                  </>
+                )}
               </button>
               <button
                 onClick={() => onReject(request._id)}
                 disabled={loading}
-                className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
+                className="bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center"
               >
-                {loading ? "..." : "✗ Refuser"}
+                {loading ? "..." : (
+                  <>
+                    <XMarkIcon className="w-4 h-4 mr-1" />
+                    Refuser
+                  </>
+                )}
               </button>
             </div>
           </div>
           <div className="flex items-center justify-between mt-3">
-            <p className="text-xs text-gray-400">
-              📅 Demande reçue le {new Date(request.createdAt).toLocaleDateString('fr-FR', {
+            <p className="text-xs text-gray-400 flex items-center">
+              <CalendarDaysIcon className="w-3 h-3 mr-1" />
+              Demande reçue le {new Date(request.createdAt).toLocaleDateString('fr-FR', {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric',
@@ -101,7 +157,8 @@ function CoHostRequestCard({ request, onAccept, onReject, loading, isHighlighted
                 minute: '2-digit'
               })}
             </p>
-            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium">
+            <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full font-medium flex items-center">
+              <ClockIcon className="w-3 h-3 mr-1" />
               En attente
             </span>
           </div>
@@ -120,6 +177,12 @@ export default function WelcomeOwner() {
   const [loadingRequests, setLoadingRequests] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [highlightedRequestId, setHighlightedRequestId] = useState(null);
+  
+  // New states for properties
+  const [ownerProperties, setOwnerProperties] = useState([]);
+  const [loadingProperties, setLoadingProperties] = useState(true);
+  const [showAllProperties, setShowAllProperties] = useState(false);
+  const [propertiesError, setPropertiesError] = useState(null);
   
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
@@ -148,6 +211,64 @@ export default function WelcomeOwner() {
   useEffect(() => {
     fetchCoHostRequests();
   }, []);
+
+  // Fetch owner properties when component mounts
+  useEffect(() => {
+    fetchOwnerProperties();
+  }, []);
+
+  const fetchOwnerProperties = async () => {
+    try {
+      setLoadingProperties(true);
+      setPropertiesError(null);
+      
+      const token = localStorage.getItem("accessToken") || localStorage.getItem("token");
+      
+      console.log("🔍 Fetching owner properties...");
+      console.log("🔑 Token found:", token ? "YES" : "NO");
+      
+      if (!token) {
+        console.log("❌ No token found in localStorage");
+        toast.error("Veuillez vous reconnecter");
+        return;
+      }
+
+      const response = await axios.get(`${API_BASE}/api/property/mine/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      
+      console.log("📡 Properties API Response:", response.data);
+      
+      if (response.data.properties) {
+        setOwnerProperties(response.data.properties);
+        console.log("✅ Properties loaded:", response.data.properties.length);
+      } else {
+        console.log("⚠️ No properties found in response");
+        setOwnerProperties([]);
+      }
+    } catch (err) {
+      console.error("❌ Error fetching owner properties:", err);
+      console.error("📋 Error details:", {
+        status: err.response?.status,
+        message: err.response?.data?.message,
+        data: err.response?.data
+      });
+      
+      setPropertiesError("Erreur lors du chargement des propriétés");
+      
+      if (err.response?.status === 401) {
+        toast.error("Session expirée, veuillez vous reconnecter");
+      } else if (err.response?.status === 403) {
+        toast.error("Accès non autorisé");
+      } else {
+        toast.error("Erreur lors du chargement des propriétés");
+      }
+    } finally {
+      setLoadingProperties(false);
+    }
+  };
 
   const fetchCoHostRequests = async () => {
     try {
@@ -280,6 +401,9 @@ export default function WelcomeOwner() {
     setSelectedDates(null);
   };
 
+  // Determine how many properties to show
+  const propertiesToShow = showAllProperties ? ownerProperties : ownerProperties.slice(0, 6);
+
   return (
     <div className="min-h-screen bg-white flex flex-col pb-24">
       <Toaster position="top-right" reverseOrder={false} />
@@ -297,58 +421,124 @@ export default function WelcomeOwner() {
         <SectionTitle title="Gérer mes propriétés" />
         <div className="flex gap-2 mb-6">
           <button 
-            className="bg-green-700 text-white px-4 py-2 rounded-full font-semibold text-sm shadow hover:bg-green-800 transition" 
+            className="bg-green-700 text-white px-4 py-2 rounded-full font-semibold text-sm shadow hover:bg-green-800 transition flex items-center" 
             onClick={() => navigate('/add-property')}
           >
-            ➕ Ajouter propriété
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Ajouter propriété
           </button>
           <button 
-            className="border border-green-800 text-green-700 px-4 py-2 rounded-full font-semibold text-sm bg-white hover:bg-green-50 transition" 
+            className="border border-green-800 text-green-700 px-4 py-2 rounded-full font-semibold text-sm bg-white hover:bg-green-50 transition flex items-center" 
             onClick={() => navigate('/my-properties')}
           >
-            🏠 Voir mes propriétés
+            <HomeIcon className="w-4 h-4 mr-2" />
+            Voir mes propriétés
           </button>
+        </div>
+
+        {/* Owner Properties Grid */}
+        <div className="mb-8">
+          {loadingProperties ? (
+            <div className="text-center py-8">
+              <div className="animate-spin inline-block w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full"></div>
+              <p className="text-gray-500 mt-2">Chargement de vos propriétés...</p>
+            </div>
+          ) : propertiesError ? (
+            <div className="text-center py-8 bg-red-50 rounded-lg border border-red-200">
+              <div className="text-6xl mb-4">⚠️</div>
+              <h3 className="text-lg font-semibold text-red-700 mb-2">Erreur de chargement</h3>
+              <p className="text-red-600 text-sm mb-4">{propertiesError}</p>
+              <button 
+                onClick={fetchOwnerProperties}
+                className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center mx-auto"
+              >
+                <ArrowPathIcon className="w-4 h-4 mr-2" />
+                Réessayer
+              </button>
+            </div>
+          ) : ownerProperties.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+              <div className="text-6xl mb-4">🏠</div>
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">Aucune propriété</h3>
+              <p className="text-gray-500 text-sm mb-4">
+                Vous n'avez pas encore ajouté de propriétés. Commencez par ajouter votre première propriété.
+              </p>
+              <button 
+                onClick={() => navigate('/add-property')}
+                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center mx-auto"
+              >
+                <PlusIcon className="w-4 h-4 mr-2" />
+                Ajouter ma première propriété
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                {propertiesToShow.map((property) => (
+                  <PropertyGridCard
+                    key={property._id}
+                    property={property}
+                    onClick={handleCardClick}
+                  />
+                ))}
+              </div>
+              
+              {ownerProperties.length > 6 && (
+                <div className="text-center">
+                  <button
+                    onClick={() => setShowAllProperties(!showAllProperties)}
+                    className="bg-white border border-green-600 text-green-600 px-6 py-2 rounded-lg hover:bg-green-50 transition-colors font-medium flex items-center mx-auto"
+                  >
+                    <EyeIcon className="w-4 h-4 mr-2" />
+                    {showAllProperties ? 
+                      `Voir moins (${ownerProperties.length - 6} masquées)` : 
+                      `Voir plus (${ownerProperties.length - 6} autres)`
+                    }
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
 
         <SectionTitle title="Gérer mes réservations" />
         <div className="flex border-b border-gray-200 mb-4">
           <button
-            className={`flex-1 py-2 font-semibold text-sm ${
+            className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center ${
               reservationTab === "reserved" 
                 ? "text-green-700 border-b-2 border-green-700" 
                 : "text-gray-500"
             }`}
             onClick={() => setReservationTab("reserved")}
           >
-            📅 Réservée
+            <CalendarDaysIcon className="w-4 h-4 mr-1" />
+            Réservée
           </button>
           <button
-            className={`flex-1 py-2 font-semibold text-sm ${
+            className={`flex-1 py-2 font-semibold text-sm flex items-center justify-center ${
               reservationTab === "pending" 
                 ? "text-green-700 border-b-2 border-green-700" 
                 : "text-gray-500"
             }`}
             onClick={() => setReservationTab("pending")}
           >
-            ⏳ En Attente
+            <ClockIcon className="w-4 h-4 mr-1" />
+            En Attente
           </button>
         </div>
         
-        {/* Example reservation cards */}
+        {/* Empty state for reservations */}
         <div className="mb-6">
-          {properties.map((prop) => (
-            <PropertyCard
-              key={prop.id}
-              name={prop.name}
-              description={prop.description}
-              location={prop.location}
-              image={prop.image}
-              onClick={() => handleCardClick(prop)}
-            />
-          ))}
+          <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="text-6xl mb-4">📅</div>
+            <h3 className="text-lg font-semibold text-gray-700 mb-2">Aucune réservation</h3>
+            <p className="text-gray-500 text-sm">
+              Les réservations de vos propriétés apparaîtront ici.
+            </p>
+          </div>
         </div>
 
-        {/* Co-Host Requests Section - Replacing "Top propriétés" */}
+        {/* Co-Host Requests Section */}
         <div id="cohost-requests-section" className="mb-6">
           <div className="flex items-center justify-between mb-4">
             <span className="text-green-900 font-bold text-lg flex items-center">
@@ -363,7 +553,8 @@ export default function WelcomeOwner() {
               className="flex items-center text-green-700 font-semibold text-sm hover:underline"
               onClick={() => window.location.reload()}
             >
-              🔄 Actualiser
+              <ArrowPathIcon className="w-4 h-4 mr-1" />
+              Actualiser
             </button>
           </div>
           
@@ -408,7 +599,7 @@ export default function WelcomeOwner() {
               &times;
             </button>
             <h3 className="text-lg font-bold mb-2 text-green-900">
-              Disponibilités pour {selectedProperty?.name}
+              Disponibilités pour {selectedProperty?.title}
             </h3>
             <Calendar value={selectedDates} onChange={handleCalendarChange} mode="range" />
             <button 
