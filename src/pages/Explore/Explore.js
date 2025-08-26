@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import ListingCardGrid from "../../components/ListingCard/ListingCardGrid";
 import SectionTitle from "../../components/shared/SectionTitle";
+import SearchBar from "../../components/explore/SearchBar";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
@@ -30,12 +31,20 @@ export default function Explore() {
     navigate(`/property/${id}`);
   };
 
+  const handleSearchClick = () => {
+    navigate('/search');
+  };
+
   if (loading) return <p className="text-center mt-20">Chargement...</p>;
 
   return (
     <div className="px-4 py-8">
+      {/* Add SearchBar component */}
+      <SearchBar onClick={handleSearchClick} />
+      
       <SectionTitle title="Explorer" />
       <ListingCardGrid listings={properties} onCardClick={handleCardClick} />
     </div>
   );
 }
+

@@ -1,16 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
 
-const GuestsSelectionScreen = ({ onBack }) => {
+const GuestsSelectionScreen = ({ onBack, selectedDestination, dateSelection, onSearch }) => {
   const [adultCount, setAdultCount] = useState(2);
   const [childrenCount, setChildrenCount] = useState(0);
   const [petsCount, setPetsCount] = useState(0);
-  const navigate = useNavigate();
-  const location = useLocation();
   
-  // Get data from previous screens
-  const { selectedDestination, dateSelection } = location.state || {};
-
   const formatDateDisplay = () => {
     if (!dateSelection) return '';
     
@@ -67,9 +61,7 @@ const GuestsSelectionScreen = ({ onBack }) => {
       }
     };
     
-    // Navigate to search results or handle the search
-    console.log('Search data:', searchData);
-    // navigate('/search-results', { state: searchData });
+    onSearch(searchData);
   };
 
   return (

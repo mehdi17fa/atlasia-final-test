@@ -26,6 +26,9 @@ import { PropertyCreationProvider } from './context/PropertyCreationContext';
 import WelcomeScreen from './pages/WelcomeScreen';
 import ResetPasswordScreen from './pages/LogIn/ResetPasswordScreen';
 
+import SearchResults from './pages/UserSearch/SearchResults';
+import PropertySearchFlow from './pages/UserSearch/SearchFlow';
+
 // Property Owner
 import WelcomeOwner from './pages/propertyOwner/WelcomeOwner';
 import AddProperty from './pages/propertyOwner/AddProperty';
@@ -149,6 +152,9 @@ function App() {
           <Route path="restauration" element={<Restauration />} />
         </Route>
 
+
+        <Route path="/search" element={<PropertySearchFlow />} />
+        <Route path="/search/results" element={<SearchResults />} />
         {/* General / Auth */}
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/signup" element={<SignUpScreen />} />
