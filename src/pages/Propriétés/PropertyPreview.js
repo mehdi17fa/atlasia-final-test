@@ -16,18 +16,24 @@ const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 export default function PropertyPreview() {
   const { id } = useParams();
   const [property, setProperty] = useState(null);
+  const [packs, setPacks] = useState([]);
   const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    const fetchProperty = async () => {
+    const fetchPropertyAndPacks = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/api/property/public/${id}`);
-        setProperty(res.data.property);
+        // Fetch property
+        const resProperty = await axios.get(`${API_BASE}/api/property/public/${id}`);
+        setProperty(resProperty.data.property);
+
+        // Fetch associated packs
+        const resPacks = await axios.get(`${API_BASE}/api/property/${id}/packs`);
+        if (resPacks.data.success) setPacks(resPacks.data.packs);
       } catch (err) {
-        console.error("Error fetching property:", err);
+        console.error("Error fetching property or packs:", err);
       }
     };
-    fetchProperty();
+    fetchPropertyAndPacks();
   }, [id]);
 
   if (!property) return <p className="text-center mt-20">Chargement...</p>;
@@ -42,21 +48,12 @@ export default function PropertyPreview() {
     property.equipments?.includes("ac") && { icon: <AcIcon className="w-7 h-7 text-gray-600" />, label: "Climatisation" },
   ].filter(Boolean);
 
-  const placeholderPhotos = ["/placeholder1.jpg", "/placeholder2.jpg", "/placeholder3.jpg"];
-  const associatedPacks = property.associatedPacks?.length
-    ? property.associatedPacks
-    : [
-        { name: "Quad Atlasia", location: "Ifrane - Farah Inn · 1h", image: "/placeholder1.jpg" },
-        { name: "Cheval Atlasia", location: "Ifrane - Farah Inn · 1h", image: "/placeholder2.jpg" },
-      ];
-
   const mapImage = "/map-placeholder.jpg";
 
-  // 🔧 FIX: Transform owner data to match PropertyLayout expectations
   const hostData = property.owner ? {
-    id: property.owner._id, // Convert _id to id for the button
+    id: property.owner._id,
     name: property.owner.displayName || property.owner.fullName || property.owner.name || 'Nom non disponible',
-    photo: property.owner.profilePic || property.owner.profileImage, // Handle both possible field names
+    photo: property.owner.profileImage || property.owner.profilePic,
     email: property.owner.email
   } : null;
 
@@ -70,7 +67,7 @@ export default function PropertyPreview() {
       host={hostData}
       checkInTime="15:00"
       features={features}
-      associatedPacks={associatedPacks}
+      associatedPacks={packs}
       mapImage={mapImage}
       reviews={property.reviews || []}
       user={user}
