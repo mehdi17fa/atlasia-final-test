@@ -14,7 +14,7 @@ export default function PropertyLayout({
   associatedPacks,
   mapImage,
   reviews,
-  user, // current logged-in user
+  user,
 }) {
   const navigate = useNavigate();
   const isLoggedIn = !!user;
@@ -77,33 +77,37 @@ export default function PropertyLayout({
             </div>
           ))}
         </div>
-        <button className="text-green-600 text-sm mt-2 float-right">Afficher plus →</button>
+        <button
+          className="text-green-600 text-sm mt-2 float-right"
+          onClick={() => host?.id && navigate(`/owner/${host.id}`)}
+        >
+          Afficher plus →
+        </button>
       </div>
 
       {/* Associated Packs */}
       <div>
-  <h2 className="font-semibold text-lg mb-3">Les packs associés</h2>
-  <div className="space-y-3">
-    {associatedPacks.length ? (
-      associatedPacks.map((pack, index) => (
-        <div key={index} className="flex items-center space-x-4 p-3 rounded-xl shadow hover:shadow-lg transition">
-          <img
-            src={pack.image || "/placeholder-pack.jpg"} // fallback si aucune image
-            alt={pack.name || "Pack"}
-            className="w-16 h-16 rounded-lg object-cover"
-          />
-          <div>
-            <p className="font-medium">{pack.name || "Nom du pack indisponible"}</p>
-            <p className="text-sm text-gray-500">{pack.location || ""}</p>
-          </div>
+        <h2 className="font-semibold text-lg mb-3">Les packs associés</h2>
+        <div className="space-y-3">
+          {associatedPacks.length ? (
+            associatedPacks.map((pack, index) => (
+              <div key={index} className="flex items-center space-x-4 p-3 rounded-xl shadow hover:shadow-lg transition">
+                <img
+                  src={pack.image || "/placeholder-pack.jpg"}
+                  alt={pack.name || "Pack"}
+                  className="w-16 h-16 rounded-lg object-cover"
+                />
+                <div>
+                  <p className="font-medium">{pack.name || "Nom du pack indisponible"}</p>
+                  <p className="text-sm text-gray-500">{pack.location || ""}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 italic">Aucun pack associé pour cette propriété.</p>
+          )}
         </div>
-      ))
-    ) : (
-      <p className="text-gray-500 italic">Aucun pack associé pour cette propriété.</p>
-    )}
-  </div>
-</div>
-
+      </div>
 
       {/* Map */}
       <div>

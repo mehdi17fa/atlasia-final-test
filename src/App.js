@@ -176,6 +176,7 @@ function App() {
         <Route path="/partner-welcome" element={<HomeIntermédiaire />} />
         <Route path="/VillaMakarska" element={<VillaMakarska />} />
         <Route path="/property/:id" element={<PropertyPreview />} />
+        <Route path="/owner/:id" element={<OwnerDetails />} />
         <Route path="/owner/:ownerId" element={<CoHostPropertyPreview />} />
 
         {/* Co-hosting routes - ADD THIS SECTION */}
