@@ -53,6 +53,7 @@ import PartnerCohostingManagement from './pages/Intermediate/PartnerCohostingMan
 // import SelectResStep from './pages/Intermediate/SelectResStep';
 // import PackageNameStep from './pages/Intermediate/PackageNameStep';
 // import PackagePriceStep from './pages/Intermediate/PackagePriceStep';
+import PackageCreationFlow from './pages/Intermediate/PackageCreationFlow';
 
 // Inbox / Chat
 import Inbox from './pages/Inbox/Inbox';
@@ -202,7 +203,7 @@ function App() {
         <Route path="/my-properties" element={<MyProperties />} />
 
         {/* Intermediate */}
-        <Route path="/create-package" element={<CreatePackage />} />
+        <Route path="/create-package" element={<PackageCreationFlow />} />
         <Route path="/select-property" element={<SelectPropertyStep />} />
         {/* <Route path="/select-res" element={<SelectResStep />} /> */}
         {/* <Route path="/package-name" element={<PackageNameStep />} />
