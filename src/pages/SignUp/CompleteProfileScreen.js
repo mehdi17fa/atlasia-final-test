@@ -75,7 +75,7 @@ const handleFinish = async () => {
 
     formData.append('email', signupEmail);
     formData.append('fullName', fullName);
-    formData.append('phone', selectedCountry.code + phoneNumber);
+    formData.append('phoneNumber', selectedCountry.code + phoneNumber);
     formData.append('country', selectedCountry.name);
     formData.append('gender', gender);
     formData.append('profileType', profileType);
@@ -96,7 +96,7 @@ const handleFinish = async () => {
     // Navigate safely with replace: true to prevent back navigation
     if (profileType === 'owner') navigate('/owner-welcome', { replace: true });
     else if (profileType === 'partner') navigate('/partner-welcome', { replace: true });
-    else navigate('/explore', { replace: true }); // default dashboard
+    else navigate('/', { replace: true }); // default dashboard
 
   } catch (error) {
     console.error('Error completing profile:', error.response?.data || error.message);

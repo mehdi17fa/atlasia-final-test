@@ -14,7 +14,7 @@ export default function EditProfileScreen() {
   const [profile, setProfile] = useState({
     fullName: '',
     email: '',
-    phone: '',
+    phoneNumber: '',
     gender: '',
   });
   const [profileImage, setProfileImage] = useState(defaultProfilePic);
@@ -26,10 +26,10 @@ export default function EditProfileScreen() {
       setProfile({
         fullName: user.fullName || '',
         email: user.email || '',
-        phone: user.phone || '',
+        phoneNumber: user.phoneNumber || '',
         gender: user.gender || '',
       });
-      setProfileImage(user.profilePic || defaultProfilePic);
+      setProfileImage(user.profileImage || defaultProfilePic);
     }
   }, [user]);
 
@@ -50,35 +50,35 @@ export default function EditProfileScreen() {
   };
 
   const handleSave = async () => {
-    // Basic client-side validation
+    // Basic validation
     if (!profile.fullName.trim()) return alert("Full name cannot be empty.");
     if (profile.fullName.length > 50) return alert("Full name is too long.");
     if (!/^[a-zA-Z\s'-]+$/.test(profile.fullName)) return alert("Full name contains invalid characters.");
-  
-    if (profile.phone && !/^[0-9+\s-]{6,20}$/.test(profile.phone)) {
+
+    if (profile.phoneNumber && !/^[0-9+\s-]{6,20}$/.test(profile.phoneNumber)) {
       return alert("Phone number format is invalid.");
     }
-  
+
     if (profile.gender && !['Male','Female','Other'].includes(profile.gender)) {
       return alert("Gender must be Male, Female or Other.");
     }
-  
+
     setLoading(true);
     try {
       const formData = new FormData();
       formData.append('email', user.email);
       formData.append('fullName', profile.fullName.trim());
-      formData.append('phone', profile.phone.trim());
+      formData.append('phoneNumber', profile.phoneNumber.trim());
       formData.append('gender', profile.gender);
-  
+
       if (selectedFile) formData.append('profilePic', selectedFile);
-  
+
       const response = await axios.post(
         'http://localhost:4000/api/auth/complete-profile',
         formData,
         { headers: { 'Content-Type': 'multipart/form-data' } }
       );
-  
+
       setUser(response.data.user);
       localStorage.setItem('user', JSON.stringify(response.data.user));
       navigate('/profile');
@@ -89,7 +89,6 @@ export default function EditProfileScreen() {
       setLoading(false);
     }
   };
-  
 
   if (!user) return <div className="text-center mt-20">Please log in to edit profile.</div>;
 
@@ -98,7 +97,6 @@ export default function EditProfileScreen() {
       {/* Header */}
       <div className="bg-green-800 text-white pt-8 flex justify-between relative">
         <h1 className="text-lg font-semibold w-full text-center mb-4">Modifier mon profil</h1>
-
         <button
           onClick={() => navigate('/profile')}
           className="absolute left-4 top-4 w-8 h-8 bg-white bg-opacity-20 rounded-full flex items-center justify-center"
@@ -141,8 +139,8 @@ export default function EditProfileScreen() {
         {[
           { label: 'Nom complet', value: profile.fullName, key: 'fullName' },
           { label: 'Adresse email', value: profile.email, key: 'email', disabled: true },
-          { label: 'Numéro de téléphone', value: profile.phone, key: 'phone' },
-          { label: 'Gender', value: profile.gender, key: 'gender' },
+          { label: 'Numéro de téléphone', value: profile.phoneNumber, key: 'phoneNumber' },
+          { label: 'Genre', value: profile.gender, key: 'gender' },
         ].map((field) => (
           <div key={field.key}>
             <label className="block text-lg font-medium text-gray-700">{field.label}</label>
