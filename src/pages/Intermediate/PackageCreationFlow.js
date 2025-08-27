@@ -1,896 +1,757 @@
-import React, { useState, useEffect } from 'react';
-import {
-  HomeIcon,
-  MapPinIcon,
-  UserGroupIcon,
-  CalendarDaysIcon,
-  ArchiveBoxIcon,
-  CheckCircleIcon,
-  RocketLaunchIcon,
-  ArrowRightIcon,
-  BellIcon,
-  FireIcon,
-  BuildingStorefrontIcon,
-  DocumentTextIcon,
-  ClipboardDocumentListIcon,
-  PlusIcon,
-  XMarkIcon,
-  ArrowLeftIcon,
-  ClockIcon,
-  FolderIcon,
-  ChartBarIcon,
-} from '@heroicons/react/24/outline';
+import React, { useState, useEffect, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
 
-// API configuration
-const API_BASE_URL = 'http://localhost:4000/api';
+const CreatePackageForm = ({ onSuccess, onCancel }) => {
+  const navigate = useNavigate();
+  const { token } = useContext(AuthContext);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  // Form data state
+  const [formData, setFormData] = useState({
+    property: '',
+    restaurants: [],
+    activities: [],
+    services: [],
+    startDate: '',
+    endDate: '',
+    name: '',
+    description: '',
+    totalPrice: ''
+  });
 
-// API helper
-// Fixed API helper function
-const apiCall = async (endpoint, options = {}) => {
-    // Get token from localStorage
-    const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-    
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-        // Add Authorization header with Bearer token
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-        ...options.headers,
-      },
-      ...options,
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  // Properties that partner can cohost
+  const [availableProperties, setAvailableProperties] = useState([]);
+  const [loadingProperties, setLoadingProperties] = useState(true);
+
+  // Load partner's properties on mount
+  useEffect(() => {
+    fetchPartnerProperties();
+  }, []);
+
+  const fetchPartnerProperties = async () => {
+    try {
+      console.log('🔍 Fetching properties with token:', token ? 'EXISTS' : 'MISSING');
+      
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/partner/my-properties`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      console.log('📡 Response status:', response.status);
+      console.log('📡 Response headers:', response.headers);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Properties data received:', data);
+        setAvailableProperties(data.properties || []);
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Error response:', response.status, errorText);
+        setError(`Failed to load properties (${response.status}): ${errorText.substring(0, 100)}`);
+      }
+    } catch (err) {
+      console.error('❌ Fetch error:', err);
+      setError(`Error loading properties: ${err.message}`);
+    } finally {
+      setLoadingProperties(false);
     }
-    
-    return response.json();
   };
 
-// Step 1: Property Selection
-const PropertySelection = ({ selectedProperty, onPropertySelect, onNext, isLoading, properties }) => {
+  const handleNext = () => {
+    if (currentStep < 6) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleStepClick = (stepNumber) => {
+    if (stepNumber <= currentStep) {
+      setCurrentStep(stepNumber);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+    setError('');
+  };
+
+  // Item management functions
+  const addItem = (category, item) => {
+    if (!item.name || !item.price) return;
+    
+    setFormData(prev => ({
+      ...prev,
+      [category]: [...prev[category], { ...item, price: parseFloat(item.price) }]
+    }));
+  };
+
+  const removeItem = (category, index) => {
+    setFormData(prev => ({
+      ...prev,
+      [category]: prev[category].filter((_, i) => i !== index)
+    }));
+  };
+
+  const editItem = (category, index, updatedItem) => {
+    setFormData(prev => ({
+      ...prev,
+      [category]: prev[category].map((item, i) => 
+        i === index ? { ...updatedItem, price: parseFloat(updatedItem.price) } : item
+      )
+    }));
+  };
+
+  const validateStep = (step) => {
+    switch (step) {
+      case 1:
+        return formData.property !== '';
+      case 2:
+        return formData.restaurants.length > 0 || formData.activities.length > 0 || formData.services.length > 0;
+      case 3:
+        return formData.startDate && formData.endDate && new Date(formData.startDate) <= new Date(formData.endDate);
+      case 4:
+        return formData.name.trim() !== '' && formData.description.trim() !== '';
+      case 5:
+        return formData.totalPrice && parseFloat(formData.totalPrice) > 0;
+      default:
+        return true;
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const payload = { ...formData };
+      if (payload.totalPrice) {
+        payload.totalPrice = parseFloat(payload.totalPrice);
+      }
+
+      console.log('💾 Saving draft with payload:', payload);
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/packages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📡 Draft save response status:', response.status);
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Draft saved successfully:', data);
+        
+        // Navigate to partner dashboard after successful draft save
+        navigate('/partner-welcome');
+      } else {
+        const errorText = await response.text();
+        console.error('❌ Draft save error:', response.status, errorText);
+        setError(errorText.substring(0, 100) || 'Failed to save draft');
+      }
+    } catch (err) {
+      console.error('❌ Draft save fetch error:', err);
+      setError('Error saving draft');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4) || !validateStep(5)) {
+      setError('Please complete all required steps before publishing');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      // First create the package
+      const payload = { ...formData };
+      if (payload.totalPrice) {
+        payload.totalPrice = parseFloat(payload.totalPrice);
+      }
+
+      console.log('🚀 Creating package for publish with payload:', payload);
+      const createResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/packages`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      console.log('📡 Create response status:', createResponse.status);
+
+      if (createResponse.ok) {
+        const createData = await createResponse.json();
+        console.log('✅ Package created:', createData);
+        
+        // Then publish it
+        console.log('📢 Publishing package:', createData.package._id);
+        const publishResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/packages/${createData.package._id}/publish`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        console.log('📡 Publish response status:', publishResponse.status);
+
+        if (publishResponse.ok) {
+          const publishData = await publishResponse.json();
+          console.log('✅ Package published successfully:', publishData);
+          
+          // Navigate to partner dashboard after successful publish
+          navigate('/partner-welcome');
+        } else {
+          const errorText = await publishResponse.text();
+          console.error('❌ Publish error:', publishResponse.status, errorText);
+          setError(errorText.substring(0, 100) || 'Failed to publish package');
+        }
+      } else {
+        const errorText = await createResponse.text();
+        console.error('❌ Create error:', createResponse.status, errorText);
+        setError(errorText.substring(0, 100) || 'Failed to create package');
+      }
+    } catch (err) {
+      console.error('❌ Publish fetch error:', err);
+      setError('Error publishing package');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const steps = [
+    'Choose Property',
+    'Select Items',
+    'Set Dates',
+    'Basic Info',
+    'Set Price',
+    'Review & Publish'
+  ];
+
   return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="mx-auto h-12 w-12 text-green-600 mb-4 flex items-center justify-center">
-          <HomeIcon className="h-8 w-8" />
+    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
+      {/* Progress Bar */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          {steps.map((step, index) => (
+            <div 
+              key={index} 
+              className="flex flex-col items-center cursor-pointer"
+              onClick={() => handleStepClick(index + 1)}
+            >
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
+                index + 1 <= currentStep 
+                  ? 'bg-green-500 text-white hover:bg-green-600' 
+                  : 'bg-gray-200 text-gray-600 cursor-not-allowed'
+              }`}>
+                {index + 1}
+              </div>
+              <span className="text-xs mt-2 text-gray-600">{step}</span>
+            </div>
+          ))}
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Choisir une propriété</h2>
-        <p className="text-gray-600">Sélectionnez la propriété pour laquelle vous souhaitez créer un package</p>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div 
+            className="bg-green-500 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${(currentStep / steps.length) * 100}%` }}
+          ></div>
+        </div>
       </div>
 
-      {isLoading ? (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Chargement des propriétés...</p>
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-red-600 text-sm">{error}</p>
         </div>
-      ) : (
-        <div className="grid gap-4 max-h-96 overflow-y-auto">
-          {properties.map((property) => (
-            <div
-              key={property._id}
-              className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                selectedProperty?._id === property._id
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200 hover:border-green-300'
-              }`}
-              onClick={() => onPropertySelect(property)}
-            >
-              <div className="flex items-center space-x-4">
-                {property.photos && property.photos[0] && (
-                  <img
-                    src={`${API_BASE_URL.replace('/api', '')}/${property.photos[0]}`}
-                    alt={property.title}
-                    className="w-16 h-16 rounded-lg object-cover"
-                  />
-                )}
-                <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{property.title || 'Propriété sans titre'}</h3>
-                  <p className="text-sm text-gray-600 flex items-center">
-                    <MapPinIcon className="h-4 w-4 mr-1" />
-                    {property.localisation?.city}, {property.localisation?.address}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {property.info?.guests} invités • {property.info?.bedrooms} chambres
-                  </p>
-                </div>
-                {selectedProperty?._id === property._id && (
-                  <CheckCircleIcon className="h-6 w-6 text-green-600" />
-                )}
+      )}
+
+      {/* Step Content */}
+      <div className="min-h-96">
+        {/* Step 1: Choose Property */}
+        {currentStep === 1 && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Property</h2>
+            {loadingProperties ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+                <p className="text-gray-600 mt-4">Loading your properties...</p>
               </div>
+            ) : availableProperties.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-gray-600">You don't have any properties to create packages for.</p>
+                <p className="text-sm text-gray-500 mt-2">You need to be accepted as a co-host first.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {availableProperties.map((property) => (
+                  <div 
+                    key={property._id}
+                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                      formData.property === property._id
+                        ? 'border-green-500 bg-green-50'
+                        : 'border-gray-200 hover:border-green-300'
+                    }`}
+                    onClick={() => handleInputChange('property', property._id)}
+                  >
+                    {property.photos && property.photos.length > 0 && (
+                      <img 
+                        src={property.photos[0]} 
+                        alt={property.title}
+                        className="w-full h-32 object-cover rounded-md mb-3"
+                      />
+                    )}
+                    <h3 className="font-semibold text-gray-900">{property.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {property.localisation?.city || 'Location not specified'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 2: Select Items */}
+        {currentStep === 2 && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Items</h2>
+            <p className="text-gray-600 mb-6">Add restaurants, activities, or services to your package (at least one required)</p>
+            
+            <div className="space-y-8">
+              {/* Existing Items */}
+              <ItemSection 
+                title="Restaurants" 
+                category="restaurants"
+                items={formData.restaurants}
+                onAddItem={addItem}
+                onRemoveItem={removeItem}
+                onEditItem={editItem}
+              />
+              
+              {/* Activities */}
+              <ItemSection 
+                title="Activities" 
+                category="activities"
+                items={formData.activities}
+                onAddItem={addItem}
+                onRemoveItem={removeItem}
+                onEditItem={editItem}
+              />
+              
+              {/* Services */}
+              <ItemSection 
+                title="Services" 
+                category="services"
+                items={formData.services}
+                onAddItem={addItem}
+                onRemoveItem={removeItem}
+                onEditItem={editItem}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Set Dates */}
+        {currentStep === 3 && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Set Package Dates</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                <input
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => handleInputChange('startDate', e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                <input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => handleInputChange('endDate', e.target.value)}
+                  min={formData.startDate || new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4: Basic Info */}
+        {currentStep === 4 && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Package Information</h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Package Name</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  placeholder="Enter package name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  rows="4"
+                  placeholder="Describe your package..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                ></textarea>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Step 5: Set Price */}
+        {currentStep === 5 && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Set Package Price</h2>
+            <div className="max-w-md">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Total Price (MAD)</label>
+              <input
+                type="number"
+                value={formData.totalPrice}
+                onChange={(e) => handleInputChange('totalPrice', e.target.value)}
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Step 6: Review */}
+        {currentStep === 6 && (
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Review & Publish</h2>
+            <PackagePreview formData={formData} availableProperties={availableProperties} />
+          </div>
+        )}
+      </div>
+
+      {/* Navigation Buttons */}
+      <div className="flex justify-between mt-8">
+        <div className="flex space-x-2">
+          {currentStep > 1 && (
+            <>
+              <button
+                onClick={() => handleStepClick(1)}
+                className="px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                disabled={isLoading}
+              >
+                First
+              </button>
+              <button
+                onClick={() => handleStepClick(currentStep - 1)}
+                className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+                disabled={isLoading}
+              >
+                Back
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className="flex space-x-3">
+          {currentStep < 6 ? (
+            <>
+              <button
+                onClick={handleSaveDraft}
+                className="px-4 py-2 text-green-600 bg-green-100 rounded-md hover:bg-green-200 transition-colors disabled:opacity-50"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save Draft'}
+              </button>
+              <button
+                onClick={handleNext}
+                className={`px-4 py-2 text-white rounded-md transition-colors ${
+                  validateStep(currentStep)
+                    ? 'bg-green-500 hover:bg-green-600'
+                    : 'bg-gray-300 cursor-not-allowed'
+                }`}
+                disabled={!validateStep(currentStep) || isLoading}
+              >
+                Next
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                onClick={handleSaveDraft}
+                className="px-4 py-2 text-green-600 bg-green-100 rounded-md hover:bg-green-200 transition-colors disabled:opacity-50"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save as Draft'}
+              </button>
+              <button
+                onClick={handlePublish}
+                className="px-6 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors disabled:opacity-50"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Publishing...' : 'Publish Package'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Item Section Component with inline editing
+const ItemSection = ({ title, category, items, onAddItem, onRemoveItem, onEditItem }) => {
+  const [newItem, setNewItem] = useState({ name: '', description: '', price: '', thumbnail: '' });
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingItem, setEditingItem] = useState({ name: '', description: '', price: '', thumbnail: '' });
+
+  const handleAdd = () => {
+    onAddItem(category, newItem);
+    setNewItem({ name: '', description: '', price: '', thumbnail: '' });
+    setShowAddForm(false);
+  };
+
+  const startEditing = (index, item) => {
+    setEditingIndex(index);
+    setEditingItem({ ...item });
+  };
+
+  const cancelEditing = () => {
+    setEditingIndex(null);
+    setEditingItem({ name: '', description: '', price: '', thumbnail: '' });
+  };
+
+  const saveEdit = () => {
+    onEditItem(category, editingIndex, editingItem);
+    setEditingIndex(null);
+    setEditingItem({ name: '', description: '', price: '', thumbnail: '' });
+  };
+
+  return (
+    <div className="border rounded-lg p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="text-green-500 hover:text-green-600 font-medium"
+        >
+          + Add {title.slice(0, -1)}
+        </button>
+      </div>
+
+      {/* Existing Items */}
+      {items.length > 0 && (
+        <div className="space-y-3 mb-4">
+          {items.map((item, index) => (
+            <div key={index} className="bg-gray-50 p-3 rounded-md">
+              {editingIndex === index ? (
+                // Edit Mode
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={editingItem.name}
+                    onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                  />
+                  <textarea
+                    placeholder="Description"
+                    value={editingItem.description}
+                    onChange={(e) => setEditingItem({...editingItem, description: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    rows="2"
+                  ></textarea>
+                  <input
+                    type="number"
+                    placeholder="Price (MAD)"
+                    value={editingItem.price}
+                    onChange={(e) => setEditingItem({...editingItem, price: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    min="0"
+                    step="0.01"
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={saveEdit}
+                      className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 text-sm disabled:opacity-50"
+                      disabled={!editingItem.name || !editingItem.price}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      className="px-3 py-1 text-gray-600 bg-gray-200 rounded-md hover:bg-gray-300 text-sm"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // Display Mode
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900">{item.name}</h4>
+                    {item.description && (
+                      <p className="text-sm text-gray-600 mt-1">{item.description}</p>
+                    )}
+                    <p className="text-sm font-medium text-green-600 mt-1">{item.price} MAD</p>
+                  </div>
+                  <div className="flex space-x-2 ml-4">
+                    <button
+                      onClick={() => startEditing(index, item)}
+                      className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onRemoveItem(category, index)}
+                      className="text-red-500 hover:text-red-600 text-sm font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      <div className="flex justify-end">
-        <button
-          onClick={onNext}
-          disabled={!selectedProperty}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
-        >
-          Suivant
-          <ArrowRightIcon className="h-4 w-4 ml-2" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Step 2: Package Type Selection
-const PackageTypeSelection = ({ selectedTypes, onTypeToggle, onNext, onPrev }) => {
-  const packageTypes = [
-    { key: 'services', label: 'Services', icon: BellIcon, description: 'Conciergerie, ménage, etc.' },
-    { key: 'activities', label: 'Activités', icon: FireIcon, description: 'Excursions, sports, loisirs' },
-    { key: 'restaurants', label: 'Restaurants', icon: BuildingStorefrontIcon, description: 'Restaurants, cafés, bars' }
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="mx-auto h-12 w-12 text-green-600 mb-4 flex items-center justify-center">
-          <ArchiveBoxIcon className="h-8 w-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Type de package</h2>
-        <p className="text-gray-600">Choisissez au moins un type de service à inclure</p>
-      </div>
-
-      <div className="grid gap-4">
-        {packageTypes.map((type) => (
-          <div
-            key={type.key}
-            className={`p-6 border-2 rounded-lg cursor-pointer transition-all ${
-              selectedTypes.includes(type.key)
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-200 hover:border-green-300'
-            }`}
-            onClick={() => onTypeToggle(type.key)}
-          >
-            <div className="flex items-center space-x-4">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <type.icon className="h-6 w-6 text-gray-600" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900">{type.label}</h3>
-                <p className="text-sm text-gray-600">{type.description}</p>
-              </div>
-              {selectedTypes.includes(type.key) && (
-                <CheckCircleIcon className="h-6 w-6 text-green-600" />
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex justify-between">
-        <button
-          onClick={onPrev}
-          className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center"
-        >
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Précédent
-        </button>
-        <button
-          onClick={onNext}
-          disabled={selectedTypes.length === 0}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
-        >
-          Suivant
-          <ArrowRightIcon className="h-4 w-4 ml-2" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Step 3: Date Selection
-const DateSelection = ({ startDate, endDate, onDateChange, onNext, onPrev }) => {
-  const today = new Date().toISOString().split('T')[0];
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="mx-auto h-12 w-12 text-green-600 mb-4 flex items-center justify-center">
-          <CalendarDaysIcon className="h-8 w-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Dates du package</h2>
-        <p className="text-gray-600">Définissez la période de validité de votre package</p>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Date de début
-          </label>
-          <input
-            type="date"
-            value={startDate}
-            min={today}
-            onChange={(e) => onDateChange('startDate', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Date de fin
-          </label>
-          <input
-            type="date"
-            value={endDate}
-            min={startDate || today}
-            onChange={(e) => onDateChange('endDate', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-between">
-        <button
-          onClick={onPrev}
-          className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center"
-        >
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Précédent
-        </button>
-        <button
-          onClick={onNext}
-          disabled={!startDate || !endDate}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
-        >
-          Suivant
-          <ArrowRightIcon className="h-4 w-4 ml-2" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Step 4: Package Info
-const PackageInfo = ({ name, description, onInfoChange, onNext, onPrev }) => {
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="mx-auto h-12 w-12 text-green-600 mb-4 flex items-center justify-center">
-          <DocumentTextIcon className="h-8 w-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Informations du package</h2>
-        <p className="text-gray-600">Donnez un nom et une description à votre package</p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Nom du package *
-          </label>
+      {/* Add Form */}
+      {showAddForm && (
+        <div className="space-y-3 border-t pt-4">
           <input
             type="text"
-            value={name}
-            onChange={(e) => onInfoChange('name', e.target.value)}
-            placeholder="Ex: Package Découverte Marrakech"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description *
-          </label>
-          <textarea
-            value={description}
-            onChange={(e) => onInfoChange('description', e.target.value)}
-            placeholder="Décrivez votre package, ce qu'il inclut, les avantages..."
-            rows={4}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-          />
-        </div>
-      </div>
-
-      <div className="flex justify-between">
-        <button
-          onClick={onPrev}
-          className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center"
-        >
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Précédent
-        </button>
-        <button
-          onClick={onNext}
-          disabled={!name.trim() || !description.trim()}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
-        >
-          Suivant
-          <ArrowRightIcon className="h-4 w-4 ml-2" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-// Step 5: Items Management
-const ItemsManagement = ({ selectedTypes, items, onItemsChange, onNext, onPrev }) => {
-  const [activeType, setActiveType] = useState(selectedTypes[0]);
-  const [newItem, setNewItem] = useState({ name: '', description: '', price: '' });
-
-  const addItem = () => {
-    if (!newItem.name || !newItem.price) return;
-    
-    const item = {
-      name: newItem.name,
-      description: newItem.description,
-      price: parseFloat(newItem.price)
-    };
-    
-    const updatedItems = { ...items };
-    if (!updatedItems[activeType]) updatedItems[activeType] = [];
-    updatedItems[activeType].push(item);
-    
-    onItemsChange(updatedItems);
-    setNewItem({ name: '', description: '', price: '' });
-  };
-
-  const removeItem = (type, index) => {
-    const updatedItems = { ...items };
-    updatedItems[type].splice(index, 1);
-    onItemsChange(updatedItems);
-  };
-
-  const hasItems = selectedTypes.some(type => items[type]?.length > 0);
-  
-  const typeLabels = {
-    services: 'Services',
-    activities: 'Activités', 
-    restaurants: 'Restaurants'
-  };
-
-  const typeIcons = {
-    services: BellIcon,
-    activities: FireIcon,
-    restaurants: BuildingStorefrontIcon
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="mx-auto h-12 w-12 text-green-600 mb-4 flex items-center justify-center">
-          <ClipboardDocumentListIcon className="h-8 w-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Ajouter des éléments</h2>
-        <p className="text-gray-600">Ajoutez au moins un élément à votre package</p>
-      </div>
-
-      {/* Type Tabs */}
-      <div className="flex border-b border-gray-200">
-        {selectedTypes.map((type) => {
-          const IconComponent = typeIcons[type];
-          return (
-            <button
-              key={type}
-              onClick={() => setActiveType(type)}
-              className={`px-4 py-2 font-medium text-sm border-b-2 flex items-center ${
-                activeType === type
-                  ? 'border-green-500 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <IconComponent className="h-4 w-4 mr-2" />
-              {typeLabels[type]} ({items[type]?.length || 0})
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Add New Item Form */}
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <h3 className="font-medium mb-3 flex items-center">
-          {React.createElement(typeIcons[activeType], { className: "h-4 w-4 mr-2" })}
-          Ajouter un {typeLabels[activeType].toLowerCase()}
-        </h3>
-        <div className="grid gap-3">
-          <input
-            type="text"
-            placeholder="Nom"
+            placeholder="Name"
             value={newItem.name}
             onChange={(e) => setNewItem({...newItem, name: e.target.value})}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
           />
-          <input
-            type="text"
-            placeholder="Description (optionnel)"
+          <textarea
+            placeholder="Description"
             value={newItem.description}
             onChange={(e) => setNewItem({...newItem, description: e.target.value})}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            rows="2"
+          ></textarea>
+          <input
+            type="number"
+            placeholder="Price (MAD)"
+            value={newItem.price}
+            onChange={(e) => setNewItem({...newItem, price: e.target.value})}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            min="0"
+            step="0.01"
           />
-          <div className="flex gap-2">
-            <input
-              type="number"
-              placeholder="Prix (MAD)"
-              value={newItem.price}
-              onChange={(e) => setNewItem({...newItem, price: e.target.value})}
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-            />
+          <div className="flex space-x-2">
             <button
-              onClick={addItem}
+              onClick={handleAdd}
+              className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
               disabled={!newItem.name || !newItem.price}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 flex items-center"
             >
-              <PlusIcon className="h-4 w-4" />
+              Add
+            </button>
+            <button
+              onClick={() => setShowAddForm(false)}
+              className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              Cancel
             </button>
           </div>
         </div>
-      </div>
-
-      {/* Items List */}
-      <div className="space-y-2 max-h-64 overflow-y-auto">
-        {(items[activeType] || []).map((item, index) => (
-          <div key={index} className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
-            <div>
-              <h4 className="font-medium">{item.name}</h4>
-              {item.description && <p className="text-sm text-gray-600">{item.description}</p>}
-              <p className="text-sm font-medium text-green-600">{item.price} MAD</p>
-            </div>
-            <button
-              onClick={() => removeItem(activeType, index)}
-              className="text-red-500 hover:text-red-700 p-1"
-            >
-              <XMarkIcon className="h-4 w-4" />
-            </button>
-          </div>
-        ))}
-        {(!items[activeType] || items[activeType].length === 0) && (
-          <div className="text-center py-8 text-gray-500">
-            <p>Aucun {typeLabels[activeType].toLowerCase()} ajouté</p>
-          </div>
-        )}
-      </div>
-
-      <div className="flex justify-between">
-        <button
-          onClick={onPrev}
-          className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 flex items-center"
-        >
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Précédent
-        </button>
-        <button
-          onClick={onNext}
-          disabled={!hasItems}
-          className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center"
-        >
-          Suivant
-          <ArrowRightIcon className="h-4 w-4 ml-2" />
-        </button>
-      </div>
+      )}
     </div>
   );
 };
 
-// Step 6: Final Review and Publish
-const FinalReview = ({ packageData, onPublish, onSaveDraft, onPrev, isSubmitting }) => {
-  const totalItems = (packageData.items?.services?.length || 0) + 
-                    (packageData.items?.activities?.length || 0) + 
-                    (packageData.items?.restaurants?.length || 0);
-
-  const getTypeIcon = (type) => {
-    const icons = { services: BellIcon, activities: FireIcon, restaurants: BuildingStorefrontIcon };
-    return icons[type] || ClipboardDocumentListIcon;
-  };
-
-  const getTypeLabel = (type) => {
-    const labels = { services: 'Services', activities: 'Activités', restaurants: 'Restaurants' };
-    return labels[type] || type;
-  };
+// Package Preview Component
+const PackagePreview = ({ formData, availableProperties }) => {
+  const selectedProperty = availableProperties.find(p => p._id === formData.property);
+  const totalItems = formData.restaurants.length + formData.activities.length + formData.services.length;
 
   return (
     <div className="space-y-6">
-      <div className="text-center">
-        <div className="mx-auto h-12 w-12 text-green-600 mb-4 flex items-center justify-center">
-          <RocketLaunchIcon className="h-8 w-8" />
-        </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Finaliser le package</h2>
-        <p className="text-gray-600">Vérifiez les informations et publiez votre package</p>
-      </div>
-
-      {/* Package Summary */}
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        <h3 className="font-semibold text-lg mb-4 flex items-center">
-          <ClipboardDocumentListIcon className="h-5 w-5 mr-2" />
-          Résumé du package
-        </h3>
+      <div className="bg-gray-50 p-6 rounded-lg">
+        <h3 className="text-xl font-semibold text-gray-900 mb-4">Package Summary</h3>
         
-        <div className="space-y-4">
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600 block mb-1 flex items-center">
-              <HomeIcon className="h-4 w-4 mr-1" />
-              Propriété:
-            </span>
-            <p className="font-medium">{packageData.selectedProperty?.title}</p>
-            <p className="text-sm text-gray-600">
-              {packageData.selectedProperty?.localisation?.city}
-            </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 className="font-medium text-gray-700 mb-2">Basic Information</h4>
+            <p><strong>Name:</strong> {formData.name}</p>
+            <p><strong>Description:</strong> {formData.description}</p>
+            <p><strong>Price:</strong> {formData.totalPrice} MAD</p>
           </div>
           
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600 block mb-1 flex items-center">
-              <ArchiveBoxIcon className="h-4 w-4 mr-1" />
-              Nom du package:
-            </span>
-            <p className="font-medium">{packageData.name}</p>
-          </div>
-          
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <span className="text-sm text-gray-600 block mb-1 flex items-center">
-              <DocumentTextIcon className="h-4 w-4 mr-1" />
-              Description:
-            </span>
-            <p className="text-gray-700">{packageData.description}</p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600 block mb-1 flex items-center">
-                <CalendarDaysIcon className="h-4 w-4 mr-1" />
-                Date de début:
-              </span>
-              <p className="font-medium">{new Date(packageData.startDate).toLocaleDateString('fr-FR')}</p>
-            </div>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <span className="text-sm text-gray-600 block mb-1 flex items-center">
-                <CalendarDaysIcon className="h-4 w-4 mr-1" />
-                Date de fin:
-              </span>
-              <p className="font-medium">{new Date(packageData.endDate).toLocaleDateString('fr-FR')}</p>
-            </div>
-          </div>
-          
-          {/* Items Summary */}
-          <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-            <span className="text-sm text-green-700 font-medium block mb-2 flex items-center">
-              <ChartBarIcon className="h-4 w-4 mr-1" />
-              Éléments du package ({totalItems} au total)
-            </span>
-            <div className="space-y-2">
-              {packageData.selectedTypes.map(type => {
-                const items = packageData.items[type] || [];
-                if (items.length === 0) return null;
-                
-                const IconComponent = getTypeIcon(type);
-                return (
-                  <div key={type} className="flex items-center text-sm">
-                    <IconComponent className="h-4 w-4 mr-2" />
-                    <span className="font-medium">{getTypeLabel(type)}:</span>
-                    <span className="ml-2 text-gray-700">
-                      {items.length} élément{items.length > 1 ? 's' : ''}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+          <div>
+            <h4 className="font-medium text-gray-700 mb-2">Property & Dates</h4>
+            <p><strong>Property:</strong> {selectedProperty?.title}</p>
+            <p><strong>Start Date:</strong> {new Date(formData.startDate).toLocaleDateString()}</p>
+            <p><strong>End Date:</strong> {new Date(formData.endDate).toLocaleDateString()}</p>
           </div>
         </div>
-      </div>
 
-      <div className="flex justify-between">
-        <button
-          onClick={onPrev}
-          disabled={isSubmitting}
-          className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 disabled:opacity-50 flex items-center"
-        >
-          <ArrowLeftIcon className="h-4 w-4 mr-2" />
-          Précédent
-        </button>
-        
-        <div className="space-x-3">
-          <button
-            onClick={onSaveDraft}
-            disabled={isSubmitting}
-            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 flex items-center"
-          >
-            {isSubmitting ? (
-              <>
-                <ClockIcon className="h-4 w-4 mr-2 animate-spin" />
-                Sauvegarde...
-              </>
-            ) : (
-              <>
-                <FolderIcon className="h-4 w-4 mr-2" />
-                Sauvegarder en brouillon
-              </>
-            )}
-          </button>
-          <button
-            onClick={onPublish}
-            disabled={isSubmitting}
-            className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center"
-          >
-            {isSubmitting ? (
-              <>
-                <ClockIcon className="h-4 w-4 mr-2 animate-spin" />
-                Publication...
-              </>
-            ) : (
-              <>
-                <RocketLaunchIcon className="h-4 w-4 mr-2" />
-                Publier
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Main Component
-const PackageCreationFlow = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [properties, setProperties] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [packageId, setPackageId] = useState(null);
-  
-  // Form data
-  const [selectedProperty, setSelectedProperty] = useState(null);
-  const [selectedTypes, setSelectedTypes] = useState([]);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [items, setItems] = useState({ services: [], activities: [], restaurants: [] });
-
-  const totalSteps = 6;
-
-// Fetch cohosted properties
-useEffect(() => {
-    const fetchProperties = async () => {
-        // Debug token
-        const token = localStorage.getItem('token') || localStorage.getItem('accessToken');
-        console.log('Token found:', !!token);
-        
-        try {
-          const response = await apiCall('/partner/my-properties');
-          console.log('API response:', response);
-          setProperties(response.properties || []);
-        } catch (error) {
-          console.error('Error fetching properties:', error);
-          console.error('Error details:', error.message);
-          alert('Erreur lors du chargement des propriétés');
-        } finally {
-          setIsLoading(false);
-        }
-      };
-
-    fetchProperties();
-  }, []);
-
-  const nextStep = () => {
-    if (currentStep < totalSteps) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const prevStep = () => {
-    if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
-
-  const toggleType = (type) => {
-    setSelectedTypes(prev => 
-      prev.includes(type) 
-        ? prev.filter(t => t !== type)
-        : [...prev, type]
-    );
-  };
-
-  const handleDateChange = (field, value) => {
-    if (field === 'startDate') {
-      setStartDate(value);
-    } else {
-      setEndDate(value);
-    }
-  };
-
-  const handleInfoChange = (field, value) => {
-    if (field === 'name') {
-      setName(value);
-    } else {
-      setDescription(value);
-    }
-  };
-
-  const createOrUpdatePackage = async (publishStatus = 'draft') => {
-    setIsSubmitting(true);
-    
-    try {
-      const packageData = {
-        property: selectedProperty._id,
-        name,
-        description,
-        startDate,
-        endDate,
-        ...items
-      };
-
-      let response;
-      if (packageId) {
-        // Update existing package
-        response = await apiCall(`/packages/${packageId}`, {
-          method: 'PATCH',
-          body: JSON.stringify(packageData)
-        });
-      } else {
-        // Create new package
-        response = await apiCall('/packages', {
-          method: 'POST',
-          body: JSON.stringify(packageData)
-        });
-        setPackageId(response.package._id);
-      }
-
-      if (publishStatus === 'published') {
-        await apiCall(`/packages/${response.package._id}/publish`, {
-          method: 'PATCH'
-        });
-      }
-
-      alert(publishStatus === 'published' ? 'Package publié avec succès!' : 'Package sauvegardé en brouillon!');
-      
-      // Reset form
-      setCurrentStep(1);
-      setSelectedProperty(null);
-      setSelectedTypes([]);
-      setStartDate('');
-      setEndDate('');
-      setName('');
-      setDescription('');
-      setItems({ services: [], activities: [], restaurants: [] });
-      setPackageId(null);
-      
-    } catch (error) {
-      console.error('Error saving package:', error);
-      alert('Erreur lors de la sauvegarde du package');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handlePublish = () => createOrUpdatePackage('published');
-  const handleSaveDraft = () => createOrUpdatePackage('draft');
-
-  const steps = [
-    { number: 1, title: 'Propriété', icon: HomeIcon },
-    { number: 2, title: 'Type', icon: ArchiveBoxIcon },
-    { number: 3, title: 'Dates', icon: CalendarDaysIcon },
-    { number: 4, title: 'Informations', icon: DocumentTextIcon },
-    { number: 5, title: 'Éléments', icon: ClipboardDocumentListIcon },
-    { number: 6, title: 'Publication', icon: RocketLaunchIcon }
-  ];
-
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-4">
-            <ArchiveBoxIcon className="h-8 w-8 text-green-600 mr-2" />
-            <h1 className="text-3xl font-bold text-gray-900">
-              Créer un nouveau package
-            </h1>
-          </div>
-          <p className="text-gray-600">
-            Créez un package d'expériences pour vos clients
-          </p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            {steps.map((step, index) => (
-              <div key={step.number} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full text-sm ${
-                  currentStep >= step.number ? 'bg-green-600 text-white' : 'bg-gray-200 text-gray-600'
-                }`}>
-                  {currentStep > step.number ? (
-                    <CheckCircleIcon className="h-5 w-5" />
-                  ) : (
-                    <step.icon className="h-5 w-5" />
-                  )}
-                </div>
-                <div className="ml-2 text-xs font-medium text-gray-600">
-                  {step.title}
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`w-12 h-1 mx-3 ${
-                    currentStep > step.number ? 'bg-green-600' : 'bg-gray-200'
-                  }`} />
-                )}
+        <div className="mt-6">
+          <h4 className="font-medium text-gray-700 mb-2">Included Items ({totalItems} total)</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {formData.restaurants.length > 0 && (
+              <div>
+                <h5 className="font-medium text-green-600">Restaurants ({formData.restaurants.length})</h5>
+                <ul className="text-sm text-gray-600 mt-1">
+                  {formData.restaurants.map((item, index) => (
+                    <li key={index}>{item.name} - {item.price} MAD</li>
+                  ))}
+                </ul>
               </div>
-            ))}
+            )}
+            
+            {formData.activities.length > 0 && (
+              <div>
+                <h5 className="font-medium text-green-600">Activities ({formData.activities.length})</h5>
+                <ul className="text-sm text-gray-600 mt-1">
+                  {formData.activities.map((item, index) => (
+                    <li key={index}>{item.name} - {item.price} MAD</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            {formData.services.length > 0 && (
+              <div>
+                <h5 className="font-medium text-green-600">Services ({formData.services.length})</h5>
+                <ul className="text-sm text-gray-600 mt-1">
+                  {formData.services.map((item, index) => (
+                    <li key={index}>{item.name} - {item.price} MAD</li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
-          <div className="text-center text-sm text-gray-500">
-            Étape {currentStep} sur {totalSteps}
-          </div>
-        </div>
-
-        {/* Step Content */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          {currentStep === 1 && (
-            <PropertySelection
-              selectedProperty={selectedProperty}
-              onPropertySelect={setSelectedProperty}
-              onNext={nextStep}
-              isLoading={isLoading}
-              properties={properties}
-            />
-          )}
-
-          {currentStep === 2 && (
-            <PackageTypeSelection
-              selectedTypes={selectedTypes}
-              onTypeToggle={toggleType}
-              onNext={nextStep}
-              onPrev={prevStep}
-            />
-          )}
-
-          {currentStep === 3 && (
-            <DateSelection
-              startDate={startDate}
-              endDate={endDate}
-              onDateChange={handleDateChange}
-              onNext={nextStep}
-              onPrev={prevStep}
-            />
-          )}
-
-          {currentStep === 4 && (
-            <PackageInfo
-              name={name}
-              description={description}
-              onInfoChange={handleInfoChange}
-              onNext={nextStep}
-              onPrev={prevStep}
-            />
-          )}
-
-          {currentStep === 5 && (
-            <ItemsManagement
-              selectedTypes={selectedTypes}
-              items={items}
-              onItemsChange={setItems}
-              onNext={nextStep}
-              onPrev={prevStep}
-            />
-          )}
-
-          {currentStep === 6 && (
-            <FinalReview
-              packageData={{
-                selectedProperty,
-                selectedTypes,
-                startDate,
-                endDate,
-                name,
-                description,
-                items
-              }}
-              onPublish={handlePublish}
-              onSaveDraft={handleSaveDraft}
-              onPrev={prevStep}
-              isSubmitting={isSubmitting}
-            />
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="mt-8 text-center text-sm text-gray-500 flex items-center justify-center">
-          <ClockIcon className="h-4 w-4 mr-1" />
-          <p>Vous pouvez sauvegarder votre progression à tout moment</p>
         </div>
       </div>
     </div>
   );
 };
 
-export default PackageCreationFlow;
+export default CreatePackageForm;

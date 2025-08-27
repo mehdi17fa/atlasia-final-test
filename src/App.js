@@ -183,6 +183,7 @@ function App() {
         <Route path="/cohosting-explore" element={<CohostingExplore />} />
         <Route path="/cohosting-preview/:propertyId" element={<CoHostPropertyPreview />} />
         <Route path="/partner/cohosting-management" element={<PartnerCohostingManagement />} />
+        
 
         {/* Messages */}
         <Route path="/inbox" element={<Inbox />} />
