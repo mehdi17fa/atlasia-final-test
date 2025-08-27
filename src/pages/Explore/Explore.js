@@ -31,17 +31,10 @@ export default function Explore() {
     navigate(`/property/${id}`);
   };
 
-  const handleSearchClick = () => {
-    navigate('/search');
-  };
-
   if (loading) return <p className="text-center mt-20">Chargement...</p>;
 
   return (
     <div className="px-4 py-8">
-      {/* Add SearchBar component */}
-      <SearchBar onClick={handleSearchClick} />
-      
       <SectionTitle title="Explorer" />
       <ListingCardGrid listings={properties} onCardClick={handleCardClick} />
     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from "react-router-dom";
 import { Outlet } from 'react-router-dom';
 import SearchBar from '../../components/explore/SearchBar';
 import ExploreFilter from '../../components/explore/ExplorFilter';
@@ -14,6 +15,7 @@ import IdentificationModal from '../SignUp/IdentificationScreen';
 import LoginScreen from '../LogIn/LogInScreen';
 
 export default function ExploreLayout() {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState('explore');
   const [selectedDestination, setSelectedDestination] = useState('');
   const [selectedDate, setSelectedDate] = useState(null);
@@ -23,7 +25,10 @@ export default function ExploreLayout() {
   const [showIdentification, setShowIdentification] = useState(false);
 
   // Step handlers
-  const handleSearchBarClick = () => setCurrentStep('destination');
+  const handleSearchBarClick = () => {
+    navigate('/search');
+  };
+
   const handleDestinationSelected = (dest) => {
     setSelectedDestination(dest);
     setCurrentStep('date');
