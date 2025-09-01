@@ -25,7 +25,7 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Initialize Socket.IO
+  // Initialize Socket.IO (attach listener ONCE)
   useEffect(() => {
     if (!user || !token) return;
 
@@ -33,22 +33,25 @@ export default function ChatPage() {
       auth: { token: `Bearer ${token}` },
     });
 
-    // Listen for messages from server
-    socket.on("message", (msg) => {
+    const handleIncomingMessage = (msg) => {
       setMessages((prev) => {
         if (prev.some((m) => m._id === msg._id)) return prev; // avoid duplicates
         return [...prev, msg];
       });
 
-      // Update conversationId if null
       if (!conversationId && msg.conversationId) {
         setConversationId(msg.conversationId);
       }
-    });
+    };
+
+    socket.on("message", handleIncomingMessage);
 
     socket.on("error", (err) => console.error("Socket error:", err));
 
-    return () => socket.disconnect();
+    return () => {
+      socket.off("message", handleIncomingMessage); // ✅ cleanup to avoid duplicates
+      socket.disconnect();
+    };
   }, [user, token, conversationId]);
 
   // Initialize conversation & fetch messages
@@ -57,7 +60,6 @@ export default function ChatPage() {
 
     const initChat = async () => {
       try {
-        // Create or get conversation
         const convoRes = await axios.post(
           "http://localhost:4000/api/chat/conversation",
           { senderId: user._id, receiverId: recipientId },
@@ -66,7 +68,6 @@ export default function ChatPage() {
 
         setConversationId(convoRes.data._id);
 
-        // Fetch messages
         const msgsRes = await axios.get(
           `http://localhost:4000/api/chat/messages/${convoRes.data._id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -85,10 +86,8 @@ export default function ChatPage() {
   const handleSendMessage = () => {
     if (!message.trim() || !recipientId) return;
 
-    // Emit message; server handles saving and broadcasting
     socket.emit("message", { conversationId, recipientId, text: message });
-
-    setMessage(""); // clear input
+    setMessage(""); 
   };
 
   const handleKeyPress = (e) => {
@@ -100,10 +99,19 @@ export default function ChatPage() {
 
   const handleBack = () => navigate("/inbox");
 
+  // Helper function to check if message is from current user
+  const isCurrentUserMessage = (msg) => {
+    const currentUserId = user?._id?.toString() || user?._id;
+    // msg.sender is an object, we need msg.sender._id
+    const msgSenderId = msg.sender?._id?.toString() || msg.sender?._id || msg.sender;
+    
+    return currentUserId === msgSenderId;
+  };
+
   return (
     <div className="w-full max-w-full bg-white min-h-screen flex flex-col">
       {/* Header */}
-      <div className="flex items-center px-4 py-3 border-b border-gray-200 bg-white shadow-sm">
+      <div className="sticky top-0 z-10 flex items-center px-4 py-3 border-b border-gray-200 bg-white shadow-sm">
         <button onClick={handleBack} className="mr-3 p-2 hover:bg-gray-100 rounded-full">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -123,8 +131,8 @@ export default function ChatPage() {
       {/* Messages */}
       <div className="flex-1 px-4 py-4 overflow-y-auto bg-gray-50" style={{ paddingBottom: '80px' }}>
         {messages.map((msg) => (
-          <div key={msg._id} className={`flex mb-2 ${msg.sender === user._id ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-xs px-4 py-2 rounded-2xl ${msg.sender === user._id ? "bg-green-600 text-white" : "bg-white text-black border"}`}>
+          <div key={msg._id} className={`flex mb-2 ${isCurrentUserMessage(msg) ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-xs px-4 py-2 rounded-2xl ${isCurrentUserMessage(msg) ? "bg-green-600 text-white" : "bg-white text-black border"}`}>
               <p className="text-sm">{msg.text}</p>
               <p className="text-xs mt-1 text-gray-400">
                 {new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

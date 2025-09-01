@@ -8,12 +8,14 @@ export default function Inbox() {
   const navigate = useNavigate();
   const { user, token } = useContext(AuthContext);
   const [conversations, setConversations] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user || !token) return;
 
     const fetchConversations = async () => {
       try {
+        setLoading(true);
         const res = await axios.get(
           `http://localhost:4000/api/chat/conversations/${user._id}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -42,6 +44,8 @@ export default function Inbox() {
         setConversations(convosWithLastMsg);
       } catch (err) {
         console.error('❌ Error fetching conversations:', err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -63,50 +67,123 @@ export default function Inbox() {
     });
   };
 
+  const formatTime = (date) => {
+    const now = new Date();
+    const messageDate = new Date(date);
+    const diffInHours = (now - messageDate) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffInHours < 48) {
+      return 'Yesterday';
+    } else {
+      return messageDate.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    }
+  };
+
+  const truncateMessage = (text, maxLength = 50) => {
+    if (!text) return 'No messages yet.';
+    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-md mx-auto bg-white min-h-screen">
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+          <div className="px-6 py-4">
+            <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+          </div>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-sm mx-auto bg-white min-h-screen">
-      <div className="px-6 py-4">
-        <h1 className="text-2xl font-semibold text-black">Inbox</h1>
+    <div className="max-w-md mx-auto bg-white min-h-screen">
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+        <div className="px-6 py-4">
+          <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}
+          </p>
+        </div>
       </div>
 
-      <div className="px-6 space-y-4">
+      {/* Conversations List */}
+      <div className="divide-y divide-gray-100">
         {conversations.length === 0 ? (
-          <p className="text-gray-500 text-center py-4">
-            No conversations yet.
-          </p>
+          <div className="flex flex-col items-center justify-center py-16 px-6">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No conversations yet</h3>
+            <p className="text-gray-500 text-center text-sm">
+              Start a conversation to see your messages here
+            </p>
+          </div>
         ) : (
           conversations.map((conv) => {
             const recipient = conv.participants?.find(p => p._id !== user._id);
             if (!recipient) return null;
 
             const lastMsg = conv.lastMsg;
+            const isFromCurrentUser = lastMsg?.sender?._id === user._id || lastMsg?.sender === user._id;
 
             return (
               <div
                 key={conv._id}
                 onClick={() => handleChatClick(conv)}
-                className="flex items-start space-x-3 py-2 cursor-pointer hover:bg-gray-50 rounded-lg px-2 transition-colors duration-200"
+                className="flex items-center space-x-4 p-4 hover:bg-gray-50 cursor-pointer transition-colors duration-200 active:bg-gray-100"
               >
-                <div className="w-12 h-12 rounded-full bg-gray-500 text-white flex items-center justify-center font-semibold text-lg flex-shrink-0">
-                  {recipient.name?.[0] || "?"}
+                {/* Avatar */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white flex items-center justify-center font-semibold text-lg shadow-sm">
+                    {recipient.name?.[0]?.toUpperCase() || recipient.email?.[0]?.toUpperCase() || "?"}
+                  </div>
+                  <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full"></div>
                 </div>
 
+                {/* Content */}
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
-                    <h3 className="font-semibold text-black text-base">{recipient.name || recipient.email || "Unknown"}</h3>
-                    <span className="text-gray-400 text-sm whitespace-nowrap ml-2">
-                      {lastMsg ? new Date(lastMsg.createdAt).toLocaleDateString() : ''}
+                    <h3 className="font-semibold text-gray-900 text-base truncate">
+                      {recipient.name || recipient.email?.split('@')[0] || "Unknown User"}
+                    </h3>
+                    <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
+                      {lastMsg ? formatTime(lastMsg.createdAt) : ''}
                     </span>
                   </div>
-                  <p className="text-gray-600 text-sm leading-relaxed">
-                    {lastMsg ? lastMsg.text : 'No messages yet.'}
-                  </p>
+                  
+                  <div className="flex items-center space-x-1">
+                    {lastMsg && isFromCurrentUser && (
+                      <span className="text-gray-400 text-xs">You:</span>
+                    )}
+                    <p className="text-sm text-gray-600 truncate">
+                      {truncateMessage(lastMsg?.text)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Unread indicator (placeholder for future implementation) */}
+                <div className="flex-shrink-0">
+                  <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+                  </svg>
                 </div>
               </div>
             );
           })
         )}
       </div>
+
+      {/* Bottom spacing for mobile navigation if needed */}
+      <div className="h-20"></div>
     </div>
   );
 }
