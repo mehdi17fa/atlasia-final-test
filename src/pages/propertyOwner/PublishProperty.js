@@ -12,6 +12,7 @@ export default function PublishProperty() {
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [bookingType, setBookingType] = useState("normal"); // default: normal
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -42,7 +43,11 @@ export default function PublishProperty() {
     try {
       await axios.patch(
         `${API_BASE}/api/property/${id}/publish`,
-        { start: startDate, end: endDate },
+        {
+          start: startDate,
+          end: endDate,
+          instantBooking: bookingType === "instant", // <-- added booking option
+        },
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
 
@@ -113,6 +118,31 @@ export default function PublishProperty() {
           onChange={(e) => setEndDate(e.target.value)}
           className="w-full border p-2 rounded mb-4"
         />
+
+        {/* Booking type selection */}
+        <label className="block mb-2 font-semibold">Type de réservation</label>
+        <div className="flex gap-4 mb-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="bookingType"
+              value="normal"
+              checked={bookingType === "normal"}
+              onChange={() => setBookingType("normal")}
+            />
+            Normal
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="bookingType"
+              value="instant"
+              checked={bookingType === "instant"}
+              onChange={() => setBookingType("instant")}
+            />
+            Instantané
+          </label>
+        </div>
 
         <div className="flex gap-2">
           <button
