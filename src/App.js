@@ -46,6 +46,7 @@ import MyProperties from './pages/propertyOwner/MyProperties';
 import PropertyPreview from './pages/Propriétés/PropertyPreview';
 import OwnerDetails from './pages/propertyOwner/OwnerDetails';
 
+
 // Intermédiaire
 import HomeIntermédiaire from './pages/Intermediate/Acceuil';
 import CreatePackage from './pages/Intermediate/CreatePackage';
@@ -179,6 +180,7 @@ function App() {
         <Route path="/owner/:id" element={<OwnerDetails />} />
         <Route path="/owner/:ownerId" element={<CoHostPropertyPreview />} />
 
+        
         {/* Co-hosting routes - ADD THIS SECTION */}
         <Route path="/cohosting-explore" element={<CohostingExplore />} />
         <Route path="/cohosting-preview/:propertyId" element={<CoHostPropertyPreview />} />

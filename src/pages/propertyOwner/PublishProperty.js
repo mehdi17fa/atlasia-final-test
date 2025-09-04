@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
@@ -23,6 +23,12 @@ export default function PublishProperty() {
     user?.accessToken ||
     user?.token;
 
+  // Debug bookingType state
+  useEffect(() => {
+    console.log("Current bookingType:", bookingType);
+    console.log("instantBooking value to send:", bookingType === "instant");
+  }, [bookingType]);
+
   const handlePublish = async () => {
     setLoading(true);
     setError("");
@@ -40,21 +46,38 @@ export default function PublishProperty() {
       return;
     }
 
+    const payload = {
+      start: startDate,
+      end: endDate,
+      instantBooking: bookingType === "instant",
+    };
+
+    console.log("Sending payload to /api/property/:id/publish:", payload);
+
     try {
-      await axios.patch(
+      // Step 1: Call the publish endpoint
+      const publishResponse = await axios.patch(
         `${API_BASE}/api/property/${id}/publish`,
-        {
-          start: startDate,
-          end: endDate,
-          instantBooking: bookingType === "instant", // <-- added booking option
-        },
+        payload,
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
+
+      console.log("Publish response:", publishResponse.data);
+
+      // Step 2: Update instantBooking separately using /api/property/:id
+      // This is a fallback since the publish endpoint ignores instantBooking
+      const updateResponse = await axios.patch(
+        `${API_BASE}/api/property/${id}`,
+        { instantBooking: bookingType === "instant" },
+        { headers: { Authorization: `Bearer ${authToken}` } }
+      );
+
+      console.log("Update instantBooking response:", updateResponse.data);
 
       setSuccess("Propriété publiée avec succès !");
       setTimeout(() => navigate("/my-properties"), 1500);
     } catch (err) {
-      console.error(err);
+      console.error("Publish error:", err);
       setError(err?.response?.data?.message || "Erreur lors de la publication.");
     } finally {
       setLoading(false);
@@ -73,16 +96,18 @@ export default function PublishProperty() {
     }
 
     try {
-      await axios.patch(
+      const response = await axios.patch(
         `${API_BASE}/api/property/${id}`,
         { status: "draft" },
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
 
+      console.log("Draft response:", response.data);
+
       setSuccess("Propriété sauvegardée en brouillon !");
       setTimeout(() => navigate("/my-properties"), 1000);
     } catch (err) {
-      console.error(err);
+      console.error("Draft error:", err);
       setError(err?.response?.data?.message || "Erreur lors de l'enregistrement.");
     } finally {
       setLoading(false);
@@ -128,7 +153,7 @@ export default function PublishProperty() {
               name="bookingType"
               value="normal"
               checked={bookingType === "normal"}
-              onChange={() => setBookingType("normal")}
+              onChange={(e) => setBookingType(e.target.value)}
             />
             Normal
           </label>
@@ -138,7 +163,7 @@ export default function PublishProperty() {
               name="bookingType"
               value="instant"
               checked={bookingType === "instant"}
-              onChange={() => setBookingType("instant")}
+              onChange={(e) => setBookingType(e.target.value)}
             />
             Instantané
           </label>
