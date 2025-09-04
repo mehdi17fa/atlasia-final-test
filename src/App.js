@@ -59,6 +59,10 @@ import PartnerCohostingManagement from './pages/Intermediate/PartnerCohostingMan
 // import PackagePriceStep from './pages/Intermediate/PackagePriceStep';
 import PackageCreationFlow from './pages/Intermediate/PackageCreationFlow';
 
+
+import BookingConfirm from './pages/Booking/BookingConfirm';
+import BookingRequest from './pages/Booking/BookingRequest';
+
 // Inbox / Chat
 import Inbox from './pages/Inbox/Inbox';
 import NotificationCenter from './pages/Inbox/NotificationCenter';
@@ -186,6 +190,9 @@ function App() {
         <Route path="/cohosting-preview/:propertyId" element={<CoHostPropertyPreview />} />
         <Route path="/partner/cohosting-management" element={<PartnerCohostingManagement />} />
         
+        <Route path="/booking/confirm/:propertyId" element={<BookingConfirm />} />
+        <Route path="/booking/request/:propertyId" element={<BookingRequest />} />
+
 
         {/* Messages */}
         <Route path="/inbox" element={<Inbox />} />

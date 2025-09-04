@@ -1,93 +1,210 @@
+// ChatPage.jsx
 import React, { useState, useEffect, useContext, useRef } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { io } from "socket.io-client";
 import { AuthContext } from "../../context/AuthContext";
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:4000";
+
 let socket;
 
 export default function ChatPage() {
-  const { sender } = useParams();
+  const { sender: ownerId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { chatData } = location.state || {};
+  const { chatData, conversationId: initialConversationId, bookingId, propertyId, guestMessage, message: successMessage } = location.state || {};
   const { user, token } = useContext(AuthContext);
 
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [conversationId, setConversationId] = useState(null);
+  const [messages, setMessages] = useState(guestMessage ? [{ _id: "temp", sender: user?._id, text: `Booking request for property ${propertyId || 'unknown'}: ${guestMessage}`, createdAt: new Date() }] : []);
+  const [conversationId, setConversationId] = useState(initialConversationId || null);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(successMessage || "");
 
   const messagesEndRef = useRef(null);
-  const recipientId = chatData?.recipientId || sender;
+  const recipientId = chatData?.recipientId || ownerId;
+
+  // Log navigation state for debugging
+  useEffect(() => {
+    console.log("Navigation state:", location.state);
+  }, []);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Initialize Socket.IO (attach listener ONCE)
+  // Initialize Socket.IO
   useEffect(() => {
-    if (!user || !token) return;
+    if (!user || !token) {
+      setError("Please log in to access the chat.");
+      navigate("/login");
+      return;
+    }
 
-    socket = io("http://localhost:4000", {
+    socket = io(API_BASE_URL, {
       auth: { token: `Bearer ${token}` },
     });
 
     const handleIncomingMessage = (msg) => {
+      console.log("Received new message via Socket.IO:", msg);
       setMessages((prev) => {
-        if (prev.some((m) => m._id === msg._id)) return prev; // avoid duplicates
+        if (prev.some((m) => m._id === msg._id)) return prev;
+        // Replace temp guestMessage if it matches
+        if (guestMessage && msg.text.includes(guestMessage) && prev.some((m) => m._id === "temp")) {
+          return [...prev.filter((m) => m._id !== "temp"), msg];
+        }
         return [...prev, msg];
       });
 
       if (!conversationId && msg.conversationId) {
+        console.log("Setting conversationId from Socket.IO message:", msg.conversationId);
         setConversationId(msg.conversationId);
       }
     };
 
-    socket.on("message", handleIncomingMessage);
+    socket.on("newMessage", handleIncomingMessage);
 
     socket.on("error", (err) => console.error("Socket error:", err));
 
     return () => {
-      socket.off("message", handleIncomingMessage); // ✅ cleanup to avoid duplicates
+      socket.off("newMessage", handleIncomingMessage);
       socket.disconnect();
     };
-  }, [user, token, conversationId]);
+  }, [user, token, conversationId, navigate, guestMessage]);
 
   // Initialize conversation & fetch messages
   useEffect(() => {
-    if (!user || !recipientId || !token) return;
+    if (!user || !recipientId || !token) {
+      setError("Missing user or recipient information.");
+      return;
+    }
 
     const initChat = async () => {
       try {
-        const convoRes = await axios.post(
-          "http://localhost:4000/api/chat/conversation",
-          { senderId: user._id, receiverId: recipientId },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+        let convoId = conversationId;
 
-        setConversationId(convoRes.data._id);
+        // Use existing conversationId if provided
+        if (!convoId) {
+          console.log("Creating new conversation with payload:", { senderId: user._id, receiverId: recipientId });
+          try {
+            const convoRes = await axios.post(
+              `${API_BASE_URL}/api/chat/conversation`,
+              { senderId: user._id, receiverId: recipientId },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            console.log("Conversation response:", convoRes.data);
+            convoId = convoRes.data._id;
+            setConversationId(convoId);
+          } catch (err) {
+            console.error("Failed to create conversation:", err);
+            setError("Unable to create conversation, but you can still send messages.");
+          }
+        }
 
-        const msgsRes = await axios.get(
-          `http://localhost:4000/api/chat/messages/${convoRes.data._id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-
-        setMessages(msgsRes.data);
+        if (convoId) {
+          console.log("Fetching messages for conversation:", convoId);
+          try {
+            const msgsRes = await axios.get(
+              `${API_BASE_URL}/api/chat/messages/${convoId}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            console.log("Messages response:", msgsRes.data);
+            // Ensure guestMessage is included if provided and not in response
+            if (guestMessage && !msgsRes.data.some((msg) => msg.text.includes(guestMessage))) {
+              setMessages([...msgsRes.data, { _id: "temp", sender: user?._id, text: `Booking request for property ${propertyId || 'unknown'}: ${guestMessage}`, createdAt: new Date() }]);
+            } else {
+              setMessages(msgsRes.data);
+            }
+          } catch (err) {
+            console.error("Failed to fetch messages:", err);
+            setError("Unable to load messages, but you can still send new messages.");
+            // Keep guestMessage if fetch fails
+            if (guestMessage) {
+              setMessages([{ _id: "temp", sender: user?._id, text: `Booking request for property ${propertyId || 'unknown'}: ${guestMessage}`, createdAt: new Date() }]);
+            } else {
+              setMessages([]);
+            }
+          }
+        }
       } catch (err) {
-        console.error("❌ Error initializing chat:", err);
+        console.error("Error initializing chat:", err);
+        setError(err?.response?.data?.message || "Failed to initialize chat. You can still send messages.");
       }
     };
 
     initChat();
-  }, [recipientId, user, token]);
+
+    // Retry fetching messages after a delay to account for backend sync
+    if (guestMessage && conversationId) {
+      const retryFetch = setTimeout(async () => {
+        try {
+          console.log("Retrying fetch for messages with conversationId:", conversationId);
+          const msgsRes = await axios.get(
+            `${API_BASE_URL}/api/chat/messages/${conversationId}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          console.log("Retry messages response:", msgsRes.data);
+          if (msgsRes.data.some((msg) => msg.text.includes(guestMessage))) {
+            setMessages(msgsRes.data);
+          }
+        } catch (err) {
+          console.error("Retry fetch failed:", err);
+        }
+      }, 2000);
+      return () => clearTimeout(retryFetch);
+    }
+  }, [recipientId, user, token, conversationId, guestMessage, propertyId]);
 
   // Send message
-  const handleSendMessage = () => {
-    if (!message.trim() || !recipientId) return;
+  const handleSendMessage = async () => {
+    if (!message.trim() || !recipientId) {
+      setError("Message or recipient is missing.");
+      return;
+    }
 
-    socket.emit("message", { conversationId, recipientId, text: message });
-    setMessage(""); 
+    try {
+      let convoId = conversationId;
+
+      // Create conversation if none exists
+      if (!convoId) {
+        const convoRes = await axios.post(
+          `${API_BASE_URL}/api/chat/conversation`,
+          { senderId: user._id, receiverId: recipientId },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        convoId = convoRes.data._id;
+        setConversationId(convoId);
+      }
+
+      const payload = {
+        conversationId: convoId,
+        senderId: user._id,
+        text: message,
+      };
+
+      console.log("Sending message with payload:", payload);
+
+      const response = await axios.post(
+        `${API_BASE_URL}/api/chat/message`,
+        payload,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      console.log("Message response:", response.data);
+
+      socket.emit("newMessage", response.data);
+      setMessages((prev) => {
+        const filtered = prev.filter((msg) => msg._id !== "temp");
+        return [...filtered, response.data];
+      });
+      setMessage("");
+      setError(null);
+    } catch (err) {
+      console.error("Error sending message:", err);
+      setError(err?.response?.data?.message || "Failed to send message.");
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -101,10 +218,8 @@ export default function ChatPage() {
 
   // Helper function to check if message is from current user
   const isCurrentUserMessage = (msg) => {
-    const currentUserId = user?._id?.toString() || user?._id;
-    // msg.sender is an object, we need msg.sender._id
-    const msgSenderId = msg.sender?._id?.toString() || msg.sender?._id || msg.sender;
-    
+    const currentUserId = user?._id?.toString();
+    const msgSenderId = msg.sender?._id?.toString() || msg.sender?.toString();
     return currentUserId === msgSenderId;
   };
 
@@ -122,20 +237,26 @@ export default function ChatPage() {
             {chatData?.avatar || "A"}
           </div>
           <div>
-            <h2 className="font-semibold text-black text-lg">{chatData?.sender || "Atlasia"}</h2>
+            <h2 className="font-semibold text-black text-lg">{chatData?.sender || "Hôte"}</h2>
             <p className="text-sm text-green-600">Online</p>
           </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 px-4 py-4 overflow-y-auto bg-gray-50" style={{ paddingBottom: '80px' }}>
+      <div className="flex-1 px-4 py-4 overflow-y-auto bg-gray-50" style={{ paddingBottom: "80px" }}>
+        {error && (
+          <div className="bg-red-100 text-red-700 p-2 rounded mb-4">{error}</div>
+        )}
+        {success && (
+          <div className="bg-green-100 text-green-700 p-2 rounded mb-4">{success}</div>
+        )}
         {messages.map((msg) => (
           <div key={msg._id} className={`flex mb-2 ${isCurrentUserMessage(msg) ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-xs px-4 py-2 rounded-2xl ${isCurrentUserMessage(msg) ? "bg-green-600 text-white" : "bg-white text-black border"}`}>
               <p className="text-sm">{msg.text}</p>
               <p className="text-xs mt-1 text-gray-400">
-                {new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                {new Date(msg.createdAt || msg.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </p>
             </div>
           </div>

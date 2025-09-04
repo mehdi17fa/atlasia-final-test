@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ReactComponent as ArrowLeftIcon } from '../../assets/icons/arrow-left.svg';
 import axios from 'axios';
 
-// Configure API base URL to match your backend
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000/api';
 
 export default function PropertyLayout({
@@ -18,18 +17,16 @@ export default function PropertyLayout({
   associatedPacks,
   mapImage,
   reviews,
-  user, // current logged-in user
-  token, // JWT token from AuthContext
+  user,
+  token,
 }) {
   const navigate = useNavigate();
-  const { id: propertyId } = useParams(); // Get propertyId from URL
+  const { id: propertyId } = useParams();
 
-  // Fallback: Check localStorage for token if prop is missing
   const fallbackToken = localStorage.getItem('accessToken');
-  const isLoggedIn = !!user && !!(token || fallbackToken); // Check user and either token prop or localStorage
-  const authToken = token || fallbackToken; // Use token prop or fallback
+  const isLoggedIn = !!user && !!(token || fallbackToken);
+  const authToken = token || fallbackToken;
 
-  // State for booking form
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [guests, setGuests] = useState(1);
@@ -37,7 +34,6 @@ export default function PropertyLayout({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Debug user, token, and loading
   useEffect(() => {
     console.log('User object:', user);
     console.log('Token prop:', token);
@@ -46,7 +42,6 @@ export default function PropertyLayout({
     console.log('Loading state:', loading);
   }, [user, token, isLoggedIn, loading]);
 
-  // Fetch property details to get instantBooking status
   useEffect(() => {
     const fetchProperty = async () => {
       try {
@@ -63,9 +58,8 @@ export default function PropertyLayout({
     }
   }, [propertyId]);
 
-  // Handle booking submission
-  const handleBooking = async () => {
-    console.log('handleBooking called. User:', user, 'Token:', authToken, 'isLoggedIn:', isLoggedIn, 'Loading:', loading);
+  const handleBooking = () => {
+    console.log('handleBooking called. User:', user, 'Token:', authToken, 'isLoggedIn:', isLoggedIn, 'InstantBooking:', instantBooking);
 
     if (!isLoggedIn) {
       console.log('Redirecting to login because user or token is missing');
@@ -79,50 +73,51 @@ export default function PropertyLayout({
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    const bookingData = {
+      propertyId,
+      checkIn,
+      checkOut,
+      guests: Number(guests),
+      userId: user._id,
+    };
 
-    try {
-      const bookingData = {
-        propertyId,
-        checkIn: new Date(checkIn).toISOString(),
-        checkOut: new Date(checkOut).toISOString(),
-        guests: Number(guests),
-        guestMessage: instantBooking ? '' : 'Booking request for your property.',
-      };
-
-      console.log('Posting booking to:', `${API_BASE_URL}/booking`, 'Data:', bookingData);
-      const response = await axios.post(`${API_BASE_URL}/booking`, bookingData, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
+    if (instantBooking) {
+      navigate(`/booking/confirm/${propertyId}`, {
+        state: {
+          bookingData,
+          authToken,
+          hostId: host?.id,
+          hostName: host?.name || "Hôte",
+          hostPhoto: host?.photo || "A",
         },
       });
-
-      console.log('Booking response:', response.data);
-
-      if (response.data.success) {
-        navigate('/my-bookings', {
-          state: {
-            message: instantBooking
-              ? 'Booking confirmed successfully!'
-              : 'Booking request sent successfully!',
-          },
+    } else {
+      try {
+        axios.get(`${API_BASE_URL}/property/public/${propertyId}`, {
+          headers: { Authorization: `Bearer ${authToken}` },
+        }).then(() => {
+          navigate(`/booking/request/${propertyId}`, {
+            state: {
+              bookingData,
+              authToken,
+              hostId: host?.id,
+              hostName: host?.name || "Hôte",
+              hostPhoto: host?.photo || "A",
+            },
+          });
+        }).catch((err) => {
+          console.error('Property validation error:', err);
+          setError('Property is not available for booking.');
         });
+      } catch (err) {
+        console.error('Error checking property:', err);
+        setError('Failed to validate property. Please try again.');
       }
-    } catch (err) {
-      console.error('Error creating booking:', err);
-      setError(
-        err.response?.data?.message ||
-        'Failed to create booking. Please check your input and try again.'
-      );
-    } finally {
-      setLoading(false); // Ensure loading resets
     }
   };
 
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-8">
-      {/* Main Image + Back Button */}
       <div className="relative rounded-2xl overflow-hidden shadow-lg">
         <img src={mainImage} alt={title} className="w-full h-96 object-cover" />
         <button
@@ -132,8 +127,6 @@ export default function PropertyLayout({
           <ArrowLeftIcon className="w-5 h-5" fill="white" stroke="white" />
         </button>
       </div>
-
-      {/* Title and Location */}
       <div>
         <h1 className="text-3xl font-bold">{title}</h1>
         <p className="text-gray-600 mt-1">{location}</p>
@@ -143,8 +136,6 @@ export default function PropertyLayout({
           <span>{reviewCount} reviews</span>
         </div>
       </div>
-
-      {/* Host */}
       {host ? (
         <div className="flex items-center space-x-4 mt-4">
           <img
@@ -160,14 +151,10 @@ export default function PropertyLayout({
       ) : (
         <p className="text-gray-500 italic mt-4">Informations sur l'hôte non disponibles.</p>
       )}
-
-      {/* Check-in */}
       <div className="border rounded-2xl p-4 shadow-sm">
         <p className="font-medium">🕒 Check-in</p>
         <p className="text-sm text-gray-500">à partir de {checkInTime}</p>
       </div>
-
-      {/* Booking Form */}
       <div className="border rounded-2xl p-4 shadow-sm">
         <h2 className="font-semibold text-lg mb-3">Book This Property</h2>
         {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
@@ -204,8 +191,6 @@ export default function PropertyLayout({
           </div>
         </div>
       </div>
-
-      {/* Features */}
       <div>
         <h2 className="font-semibold text-lg mb-3">Ce que propose ce logement</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm text-gray-700 font-medium">
@@ -218,8 +203,6 @@ export default function PropertyLayout({
         </div>
         <button className="text-green-600 text-sm mt-2 float-right">Afficher plus →</button>
       </div>
-
-      {/* Associated Packs */}
       <div>
         <h2 className="font-semibold text-lg mb-3">Les packs associés</h2>
         <div className="space-y-3">
@@ -238,14 +221,10 @@ export default function PropertyLayout({
           ))}
         </div>
       </div>
-
-      {/* Map */}
       <div>
         <h2 className="font-semibold text-lg mb-3">Localisation</h2>
         <img src={mapImage} alt="Map" className="rounded-2xl w-full h-56 object-cover shadow" />
       </div>
-
-      {/* Reviews */}
       <div>
         <div className="flex items-center space-x-2 mb-3">
           <span className="text-green-600 font-medium">★ {rating}</span>
@@ -259,8 +238,6 @@ export default function PropertyLayout({
           </div>
         ))}
       </div>
-
-      {/* Contact + Reserve */}
       <div className="border rounded-2xl p-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
         {host && (
           <div className="flex items-center space-x-3">
