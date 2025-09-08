@@ -45,6 +45,7 @@ import PublishProperty from './pages/propertyOwner/PublishProperty';
 import MyProperties from './pages/propertyOwner/MyProperties';
 import PropertyPreview from './pages/Propriétés/PropertyPreview';
 import OwnerDetails from './pages/propertyOwner/OwnerDetails';
+import OwnerIncomePage from './pages/propertyOwner/OwnerIncomePage';
 
 
 // Intermédiaire
@@ -183,6 +184,7 @@ function App() {
         <Route path="/property/:id" element={<PropertyPreview />} />
         <Route path="/owner/:id" element={<OwnerDetails />} />
         <Route path="/owner/:ownerId" element={<CoHostPropertyPreview />} />
+        <Route path="/owner/income" element={<OwnerIncomePage />} />
 
         
         {/* Co-hosting routes - ADD THIS SECTION */}
