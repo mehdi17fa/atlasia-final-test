@@ -17,7 +17,8 @@ import {
   XMarkIcon,
   SparklesIcon,
   MapPinIcon,
-  EyeIcon
+  EyeIcon,
+  CurrencyDollarIcon // Added for income button
 } from '@heroicons/react/24/outline';
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
@@ -433,6 +434,13 @@ export default function WelcomeOwner() {
           >
             <HomeIcon className="w-4 h-4 mr-2" />
             Voir mes propriétés
+          </button>
+          <button 
+            className="border border-green-800 text-green-700 px-4 py-2 rounded-full font-semibold text-sm bg-white hover:bg-green-50 transition flex items-center" 
+            onClick={() => navigate('/owner/income')}
+          >
+            <CurrencyDollarIcon className="w-4 h-4 mr-2" />
+            Voir mes revenus
           </button>
         </div>
 
