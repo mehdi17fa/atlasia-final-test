@@ -29,6 +29,11 @@ import ResetPasswordScreen from './pages/LogIn/ResetPasswordScreen';
 import SearchResults from './pages/UserSearch/SearchResults';
 import PropertySearchFlow from './pages/UserSearch/SearchFlow';
 
+import TouristBookings from './pages/Booking/MyBookings';
+
+import FavoritesProperties from './pages/Favorite/FavoritesProperties';
+import { FavoritesProvider } from './context/FavoritesContext';
+
 // Property Owner
 import WelcomeOwner from './pages/propertyOwner/WelcomeOwner';
 import AddProperty from './pages/propertyOwner/AddProperty';
@@ -151,6 +156,7 @@ function App() {
 
   return (
     <PropertyCreationProvider>
+      <FavoritesProvider>
       <Routes>
         {/* Explore layout */}
         <Route path="/" element={<ExploreLayout />}>
@@ -195,6 +201,10 @@ function App() {
         <Route path="/booking/confirm/:propertyId" element={<BookingConfirm />} />
         <Route path="/booking/request/:propertyId" element={<BookingRequest />} />
 
+        <Route path="/my-bookings" element={<TouristBookings />} />
+
+        <Route path="/favorites-properties" element={<FavoritesProperties />} />
+
 
         {/* Messages */}
         <Route path="/inbox" element={<Inbox />} />
@@ -231,8 +241,9 @@ function App() {
 
         <Route path="/data" element={<DocumentUpload />} />
       </Routes>
-
+      </FavoritesProvider>
       <ConditionalNavbar />
+      
     </PropertyCreationProvider>
   );
 }

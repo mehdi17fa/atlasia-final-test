@@ -1,9 +1,7 @@
-// src/pages/Explore/Explore.js
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import ListingCardGrid from "../../components/ListingCard/ListingCardGrid";
 import SectionTitle from "../../components/shared/SectionTitle";
-import SearchBar from "../../components/explore/SearchBar";
 import { useNavigate } from "react-router-dom";
 
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
@@ -40,4 +38,3 @@ export default function Explore() {
     </div>
   );
 }
-
