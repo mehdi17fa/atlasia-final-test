@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -9,6 +9,8 @@ import {
 
 import { useState } from 'react';
 
+// Import AuthContext
+import { AuthContext } from './context/AuthContext';
 
 import SignUpScreen from './pages/SignUp/SignUpScreen';
 import IdentificationScreen from './pages/SignUp/IdentificationScreen';
@@ -22,6 +24,9 @@ import Restauration from './pages/Explore/Restauration';
 import Profile from './pages/Profile/Profile';
 import Favorites from './pages/Favorite/Favorite';
 import Navbar from './components/shared/Navbar';
+import NavbarProperty from './components/shared/NavbarProperty';
+import NavbarPartner from './components/shared/NavbarPartner';
+
 import { PropertyCreationProvider } from './context/PropertyCreationContext';
 import WelcomeScreen from './pages/WelcomeScreen';
 import ResetPasswordScreen from './pages/LogIn/ResetPasswordScreen';
@@ -53,10 +58,8 @@ import SelectPropertyStep from './pages/Intermediate/SelectPropertyStep';
 import CohostingExplore from './pages/Explore/CohostingExplore';
 import CoHostPropertyPreview from './pages/Intermediate/CoHostPropertyPreview'; 
 import PartnerCohostingManagement from './pages/Intermediate/PartnerCohostingManagement';
-// import SelectResStep from './pages/Intermediate/SelectResStep';
-// import PackageNameStep from './pages/Intermediate/PackageNameStep';
-// import PackagePriceStep from './pages/Intermediate/PackagePriceStep';
 import PackageCreationFlow from './pages/Intermediate/PackageCreationFlow';
+import Performance from './pages/Intermediate/Performance';
 
 // Inbox / Chat
 import Inbox from './pages/Inbox/Inbox';
@@ -120,16 +123,27 @@ function GuestsSelectionScreenWrapper() {
   );
 }
 
-// Conditional mobile navbar
+// Updated Conditional navbar with role-based logic
 function ConditionalNavbar() {
   const location = useLocation();
+  const { user } = useContext(AuthContext);
   const isChatPage = location.pathname.startsWith('/chat/');
 
+  // Don't show navbar on chat pages
   if (isChatPage) return null;
 
+  // Don't show navbar if user is not logged in
+  if (!user) return null;
+
   return (
-    <div className="block md:hidden">
-      <Navbar />
+    <div className="block">
+      {user.role === 'owner' ? (
+        <NavbarProperty />
+      ) : user.role === 'partner' ? (
+        <NavbarPartner />
+      ) : (
+        <Navbar />
+      )}
     </div>
   );
 }
@@ -152,9 +166,9 @@ function App() {
           <Route path="restauration" element={<Restauration />} />
         </Route>
 
-
         <Route path="/search" element={<PropertySearchFlow />} />
         <Route path="/search/results" element={<SearchResults />} />
+        
         {/* General / Auth */}
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/signup" element={<SignUpScreen />} />
@@ -179,12 +193,11 @@ function App() {
         <Route path="/owner/:id" element={<OwnerDetails />} />
         <Route path="/owner/:ownerId" element={<CoHostPropertyPreview />} />
 
-        {/* Co-hosting routes - ADD THIS SECTION */}
+        {/* Co-hosting routes */}
         <Route path="/cohosting-explore" element={<CohostingExplore />} />
         <Route path="/cohosting-preview/:propertyId" element={<CoHostPropertyPreview />} />
         <Route path="/partner/cohosting-management" element={<PartnerCohostingManagement />} />
         
-
         {/* Messages */}
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/notifications" element={<NotificationCenter />} />
@@ -213,12 +226,10 @@ function App() {
         {/* Intermediate */}
         <Route path="/create-package" element={<PackageCreationFlow />} />
         <Route path="/select-property" element={<SelectPropertyStep />} />
-        {/* <Route path="/select-res" element={<SelectResStep />} /> */}
-        {/* <Route path="/package-name" element={<PackageNameStep />} />
-        
-        <Route path="/package-price" element={<PackagePriceStep />} /> */}
-
+        <Route path='/performance' element={<Performance />} />
         <Route path="/data" element={<DocumentUpload />} />
+        <Route path="/acceuill" element={<HomeIntermédiaire />} />
+
       </Routes>
 
       <ConditionalNavbar />

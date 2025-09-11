@@ -409,9 +409,33 @@ export default function WelcomeOwner() {
       <Toaster position="top-right" reverseOrder={false} />
       
       <div className="w-full max-w-7xl mx-auto px-4 pt-4 md:px-8 lg:px-16">
-        {/* App name centered on top */}
-        <div className="flex items-center justify-center py-4 bg-white shadow-sm">
+        {/* App name and profile avatar on top */}
+        <div className="flex items-center justify-between py-4 px-4 bg-white shadow-sm">
+          <div className="w-12"></div> {/* Empty div for spacing */}
           <span className="text-2xl font-bold text-green-700">ATLASIA</span>
+          
+          {/* User avatar */}
+          <button
+            onClick={() => navigate('/profile')}
+            className="flex items-center justify-center"
+            aria-label="Go to profile"
+          >
+            <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center overflow-hidden">
+              {user?.profilePic ? (
+                <img 
+                  src={user.profilePic} 
+                  alt={user.fullName || user.name || 'User'} 
+                  className="w-full h-full object-cover" 
+                />
+              ) : (
+                <div className="w-8 h-8 bg-green-800 rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm font-bold">
+                    {user?.firstName ? user.firstName.charAt(0).toUpperCase() : (user?.fullName ? user.fullName.charAt(0).toUpperCase() : (user?.name ? user.name.charAt(0).toUpperCase() : (user?.email ? user.email.charAt(0).toUpperCase() : 'U')))}
+                  </span>
+                </div>
+              )}
+            </div>
+          </button>
         </div>
         
         <h1 className="text-2xl font-bold text-green-900 mb-2 mt-4">
