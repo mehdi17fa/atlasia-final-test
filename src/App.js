@@ -50,6 +50,8 @@ import PublishProperty from './pages/propertyOwner/PublishProperty';
 import MyProperties from './pages/propertyOwner/MyProperties';
 import PropertyPreview from './pages/Propriétés/PropertyPreview';
 import OwnerDetails from './pages/propertyOwner/OwnerDetails';
+import OwnerIncomePage from './pages/propertyOwner/OwnerIncomePage';
+
 
 // Intermédiaire
 import HomeIntermédiaire from './pages/Intermediate/Acceuil';
@@ -59,7 +61,6 @@ import CohostingExplore from './pages/Explore/CohostingExplore';
 import CoHostPropertyPreview from './pages/Intermediate/CoHostPropertyPreview'; 
 import PartnerCohostingManagement from './pages/Intermediate/PartnerCohostingManagement';
 import PackageCreationFlow from './pages/Intermediate/PackageCreationFlow';
-import Performance from './pages/Intermediate/Performance';
 
 // Inbox / Chat
 import Inbox from './pages/Inbox/Inbox';
@@ -193,11 +194,12 @@ function App() {
         <Route path="/owner/:id" element={<OwnerDetails />} />
         <Route path="/owner/:ownerId" element={<CoHostPropertyPreview />} />
 
-        {/* Co-hosting routes */}
+        {/* Co-hosting routes - ADD THIS SECTION */}
         <Route path="/cohosting-explore" element={<CohostingExplore />} />
         <Route path="/cohosting-preview/:propertyId" element={<CoHostPropertyPreview />} />
         <Route path="/partner/cohosting-management" element={<PartnerCohostingManagement />} />
         
+
         {/* Messages */}
         <Route path="/inbox" element={<Inbox />} />
         <Route path="/notifications" element={<NotificationCenter />} />

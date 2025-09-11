@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
@@ -12,6 +12,7 @@ export default function PublishProperty() {
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [bookingType, setBookingType] = useState("normal"); // default: normal
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -21,6 +22,12 @@ export default function PublishProperty() {
     localStorage.getItem("token") ||
     user?.accessToken ||
     user?.token;
+
+  // Debug bookingType state
+  useEffect(() => {
+    console.log("Current bookingType:", bookingType);
+    console.log("instantBooking value to send:", bookingType === "instant");
+  }, [bookingType]);
 
   const handlePublish = async () => {
     setLoading(true);
@@ -39,17 +46,38 @@ export default function PublishProperty() {
       return;
     }
 
+    const payload = {
+      start: startDate,
+      end: endDate,
+      instantBooking: bookingType === "instant",
+    };
+
+    console.log("Sending payload to /api/property/:id/publish:", payload);
+
     try {
-      await axios.patch(
+      // Step 1: Call the publish endpoint
+      const publishResponse = await axios.patch(
         `${API_BASE}/api/property/${id}/publish`,
-        { start: startDate, end: endDate },
+        payload,
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
+
+      console.log("Publish response:", publishResponse.data);
+
+      // Step 2: Update instantBooking separately using /api/property/:id
+      // This is a fallback since the publish endpoint ignores instantBooking
+      const updateResponse = await axios.patch(
+        `${API_BASE}/api/property/${id}`,
+        { instantBooking: bookingType === "instant" },
+        { headers: { Authorization: `Bearer ${authToken}` } }
+      );
+
+      console.log("Update instantBooking response:", updateResponse.data);
 
       setSuccess("Propriété publiée avec succès !");
       setTimeout(() => navigate("/my-properties"), 1500);
     } catch (err) {
-      console.error(err);
+      console.error("Publish error:", err);
       setError(err?.response?.data?.message || "Erreur lors de la publication.");
     } finally {
       setLoading(false);
@@ -68,16 +96,18 @@ export default function PublishProperty() {
     }
 
     try {
-      await axios.patch(
+      const response = await axios.patch(
         `${API_BASE}/api/property/${id}`,
         { status: "draft" },
         { headers: { Authorization: `Bearer ${authToken}` } }
       );
 
+      console.log("Draft response:", response.data);
+
       setSuccess("Propriété sauvegardée en brouillon !");
       setTimeout(() => navigate("/my-properties"), 1000);
     } catch (err) {
-      console.error(err);
+      console.error("Draft error:", err);
       setError(err?.response?.data?.message || "Erreur lors de l'enregistrement.");
     } finally {
       setLoading(false);
@@ -113,6 +143,31 @@ export default function PublishProperty() {
           onChange={(e) => setEndDate(e.target.value)}
           className="w-full border p-2 rounded mb-4"
         />
+
+        {/* Booking type selection */}
+        <label className="block mb-2 font-semibold">Type de réservation</label>
+        <div className="flex gap-4 mb-4">
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="bookingType"
+              value="normal"
+              checked={bookingType === "normal"}
+              onChange={(e) => setBookingType(e.target.value)}
+            />
+            Normal
+          </label>
+          <label className="flex items-center gap-2">
+            <input
+              type="radio"
+              name="bookingType"
+              value="instant"
+              checked={bookingType === "instant"}
+              onChange={(e) => setBookingType(e.target.value)}
+            />
+            Instantané
+          </label>
+        </div>
 
         <div className="flex gap-2">
           <button

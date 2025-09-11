@@ -1,4 +1,4 @@
-// src/pages/Chat/Inbox.js
+// Inbox.js
 import React, { useEffect, useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -11,33 +11,42 @@ export default function Inbox() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user || !token) return;
+    if (!user || !token) {
+      navigate("/login");
+      return;
+    }
 
     const fetchConversations = async () => {
       try {
         setLoading(true);
+        console.log("Fetching conversations for user:", user._id);
         const res = await axios.get(
           `http://localhost:4000/api/chat/conversations/${user._id}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        const convos = res.data;
+        console.log("Conversations response:", res.data);
 
         // Fetch last message for each conversation
         const convosWithLastMsg = await Promise.all(
-          convos.map(async (conv) => {
-            const msgsRes = await axios.get(
-              `http://localhost:4000/api/chat/messages/${conv._id}`,
-              { headers: { Authorization: `Bearer ${token}` } }
-            );
+          res.data.map(async (conv) => {
+            try {
+              const msgsRes = await axios.get(
+                `http://localhost:4000/api/chat/messages/${conv._id}`,
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              console.log(`Messages for conversation ${conv._id}:`, msgsRes.data);
+              const messages = msgsRes.data;
+              const lastMsg = messages[messages.length - 1] || null;
 
-            const messages = msgsRes.data;
-            const lastMsg = messages[messages.length - 1] || null;
-
-            return {
-              ...conv,
-              lastMsg,
-            };
+              return {
+                ...conv,
+                lastMsg,
+              };
+            } catch (err) {
+              console.error(`Failed to fetch messages for conversation ${conv._id}:`, err);
+              return { ...conv, lastMsg: null };
+            }
           })
         );
 
@@ -50,20 +59,34 @@ export default function Inbox() {
     };
 
     fetchConversations();
-  }, [user, token]);
+  }, [user, token, navigate]);
 
   const handleChatClick = (conversation) => {
     const recipient = conversation.participants?.find(p => p._id !== user._id);
     if (!recipient) return;
 
+    const lastMsgText = conversation.lastMsg?.text || '';
+
+    console.log("Navigating to chat with state:", {
+      chatData: {
+        recipientId: recipient._id,
+        sender: recipient.name || recipient.email?.split('@')[0] || "Hôte",
+        avatar: recipient.name?.[0]?.toUpperCase() || recipient.email?.[0]?.toUpperCase() || "A",
+      },
+      conversationId: conversation._id,
+      guestMessage: lastMsgText.includes('Booking request for property') ? lastMsgText.split(': ').slice(1).join(': ') : lastMsgText,
+    });
+
     navigate(`/chat/${recipient._id}`, {
-      state: { 
-        chatData: { 
-          recipientId: recipient._id, 
-          sender: recipient.name || recipient.email || "Unknown", 
-          avatar: recipient.name?.[0] || "?" 
-        } 
-      }
+      state: {
+        chatData: {
+          recipientId: recipient._id,
+          sender: recipient.name || recipient.email?.split('@')[0] || "Hôte",
+          avatar: recipient.name?.[0]?.toUpperCase() || recipient.email?.[0]?.toUpperCase() || "A",
+        },
+        conversationId: conversation._id,
+        guestMessage: lastMsgText.includes('Booking request for property') ? lastMsgText.split(': ').slice(1).join(': ') : lastMsgText,
+      },
     });
   };
 
@@ -71,7 +94,7 @@ export default function Inbox() {
     const now = new Date();
     const messageDate = new Date(date);
     const diffInHours = (now - messageDate) / (1000 * 60 * 60);
-    
+
     if (diffInHours < 24) {
       return messageDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     } else if (diffInHours < 48) {
@@ -149,7 +172,7 @@ export default function Inbox() {
                 {/* Avatar */}
                 <div className="relative flex-shrink-0">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-green-600 text-white flex items-center justify-center font-semibold text-lg shadow-sm">
-                    {recipient.name?.[0]?.toUpperCase() || recipient.email?.[0]?.toUpperCase() || "?"}
+                    {recipient.name?.[0]?.toUpperCase() || recipient.email?.[0]?.toUpperCase() || "A"}
                   </div>
                   <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full"></div>
                 </div>
@@ -158,13 +181,13 @@ export default function Inbox() {
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-start mb-1">
                     <h3 className="font-semibold text-gray-900 text-base truncate">
-                      {recipient.name || recipient.email?.split('@')[0] || "Unknown User"}
+                      {recipient.name || recipient.email?.split('@')[0] || "Hôte"}
                     </h3>
                     <span className="text-xs text-gray-500 whitespace-nowrap ml-2">
                       {lastMsg ? formatTime(lastMsg.createdAt) : ''}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center space-x-1">
                     {lastMsg && isFromCurrentUser && (
                       <span className="text-gray-400 text-xs">You:</span>
@@ -175,7 +198,7 @@ export default function Inbox() {
                   </div>
                 </div>
 
-                {/* Unread indicator (placeholder for future implementation) */}
+                {/* Unread indicator */}
                 <div className="flex-shrink-0">
                   <svg className="w-5 h-5 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
@@ -187,7 +210,7 @@ export default function Inbox() {
         )}
       </div>
 
-      {/* Bottom spacing for mobile navigation if needed */}
+      {/* Bottom spacing for mobile navigation */}
       <div className="h-20"></div>
     </div>
   );
