@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   HomeIcon,
   MapPinIcon,
@@ -13,10 +13,8 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/react/24/outline';
-
 import { AuthContext } from '../../context/AuthContext';
 
-// API configuration
 const API_BASE_URL = 'http://localhost:4000/api';
 
 const LoadingSpinner = () => (
@@ -27,12 +25,12 @@ const LoadingSpinner = () => (
 
 const PropertyCard = ({ property }) => {
   const navigate = useNavigate();
-
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return null;
-    if (imagePath.startsWith('http')) return imagePath;
-    return `${API_BASE_URL.replace('/api', '')}/uploads/profilepic/${imagePath}`;
-  };
+  const getImageUrl = (imagePath) =>
+    imagePath
+      ? imagePath.startsWith('http')
+        ? imagePath
+        : `${API_BASE_URL.replace('/api', '')}/uploads/profilepic/${imagePath}`
+      : null;
 
   return (
     <div className="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
@@ -58,10 +56,7 @@ const PropertyCard = ({ property }) => {
       </div>
 
       <div className="p-4">
-        <h3 className="font-semibold text-gray-900 mb-2">
-          {property.title || 'Propriété sans titre'}
-        </h3>
-
+        <h3 className="font-semibold text-gray-900 mb-2">{property.title || 'Propriété sans titre'}</h3>
         <div className="text-sm text-gray-600 mb-2">
           <div className="flex items-center mb-1">
             <MapPinIcon className="h-4 w-4 mr-1 text-gray-500" />
@@ -70,7 +65,6 @@ const PropertyCard = ({ property }) => {
               {property.localisation?.address && `, ${property.localisation.address}`}
             </span>
           </div>
-
           {property.info && (
             <div className="flex items-center space-x-4 text-xs">
               <span>{property.info.guests || 0} invités</span>
@@ -81,28 +75,26 @@ const PropertyCard = ({ property }) => {
         </div>
 
         <div className="flex items-center justify-between mb-2">
-          <span className={`px-2 py-1 rounded-full text-xs ${
-            property.status === 'published'
-              ? 'bg-green-100 text-green-800'
-              : 'bg-yellow-100 text-yellow-800'
-          }`}>
+          <span
+            className={`px-2 py-1 rounded-full text-xs ${
+              property.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+            }`}
+          >
             {property.status === 'published' ? 'Publiée' : 'Brouillon'}
           </span>
-
           {property.price && (
-            <div className="text-sm font-medium text-gray-900">
-              {property.price.weekdays || property.price.weekend || 0}€/nuit
-            </div>
+            <div className="text-sm font-medium text-gray-900">{property.price.weekdays || property.price.weekend || 0}€/nuit</div>
           )}
         </div>
 
         <div className="flex items-center justify-between pt-2 border-t border-gray-100">
           <div className="text-xs text-gray-500">
             {property.equipments && property.equipments.length > 0 && (
-              <span>{property.equipments.length} équipement{property.equipments.length > 1 ? 's' : ''}</span>
+              <span>
+                {property.equipments.length} équipement{property.equipments.length > 1 ? 's' : ''}
+              </span>
             )}
           </div>
-
           <button
             onClick={() => navigate(`/property/${property._id}`)}
             className="text-green-600 hover:text-green-700 text-sm font-medium"
@@ -117,12 +109,14 @@ const PropertyCard = ({ property }) => {
 
 const PackageCard = ({ package: pkg }) => {
   const navigate = useNavigate();
-
   const getStatusColor = (status) => {
     switch (status) {
-      case 'published': return 'bg-green-100 text-green-800';
-      case 'draft': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'published':
+        return 'bg-green-100 text-green-800';
+      case 'draft':
+        return 'bg-yellow-100 text-yellow-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -138,14 +132,9 @@ const PackageCard = ({ package: pkg }) => {
     <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4 hover:shadow-lg transition-shadow">
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <h3 className="font-semibold text-gray-900 mb-1">
-            {pkg.name || 'Package sans titre'}
-          </h3>
-          <p className="text-sm text-gray-600 line-clamp-2">
-            {pkg.description || 'Aucune description'}
-          </p>
+          <h3 className="font-semibold text-gray-900 mb-1">{pkg.name || 'Package sans titre'}</h3>
+          <p className="text-sm text-gray-600 line-clamp-2">{pkg.description || 'Aucune description'}</p>
         </div>
-
         <span className={`px-2 py-1 rounded-full text-xs font-medium ml-2 ${getStatusColor(pkg.status)}`}>
           {pkg.status === 'published' ? 'Publié' : 'Brouillon'}
         </span>
@@ -160,10 +149,9 @@ const PackageCard = ({ package: pkg }) => {
         <div className="flex items-center">
           <CalendarDaysIcon className="h-4 w-4 mr-2 text-gray-500 flex-shrink-0" />
           <span className="text-xs">
-            {pkg.startDate && pkg.endDate 
+            {pkg.startDate && pkg.endDate
               ? `${new Date(pkg.startDate).toLocaleDateString('fr-FR')} - ${new Date(pkg.endDate).toLocaleDateString('fr-FR')}`
-              : 'Dates non définies'
-            }
+              : 'Dates non définies'}
           </span>
         </div>
 
@@ -174,9 +162,7 @@ const PackageCard = ({ package: pkg }) => {
       </div>
 
       <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
-        <div className="text-xs text-gray-500">
-          Créé le {new Date(pkg.createdAt).toLocaleDateString('fr-FR')}
-        </div>
+        <div className="text-xs text-gray-500">Créé le {new Date(pkg.createdAt).toLocaleDateString('fr-FR')}</div>
 
         <button
           onClick={() => navigate(`/package/${pkg._id}`)}
@@ -233,14 +219,14 @@ export default function PartnerDashboard() {
   const [isLoadingProperties, setIsLoadingProperties] = useState(true);
   const [isLoadingPackages, setIsLoadingPackages] = useState(true);
   const [error, setError] = useState(null);
+  const [activePackageTab, setActivePackageTab] = useState('property'); // tab state
 
-  // API helper utilisant token
   const apiCall = async (endpoint, options = {}) => {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
+        ...(token && { Authorization: `Bearer ${token}` }),
         ...options.headers,
       },
       ...options,
@@ -307,12 +293,17 @@ export default function PartnerDashboard() {
     }
   };
 
+  const individualPackages = packages.filter((pkg) => !pkg.property);
+  const propertyLinkedPackages = packages.filter((pkg) => pkg.property);
+
   const stats = {
     totalProperties: properties.length,
-    publishedProperties: properties.filter(p => p.status === 'published').length,
+    publishedProperties: properties.filter((p) => p.status === 'published').length,
     totalPackages: packages.length,
-    publishedPackages: packages.filter(p => p.status === 'published').length,
-    draftPackages: packages.filter(p => p.status === 'draft').length,
+    publishedPackages: packages.filter((p) => p.status === 'published').length,
+    draftPackages: packages.filter((p) => p.status === 'draft').length,
+    totalIndividualPackages: individualPackages.length,
+    totalPropertyLinkedPackages: propertyLinkedPackages.length,
   };
 
   const retryFetch = () => {
@@ -320,105 +311,62 @@ export default function PartnerDashboard() {
     fetchData();
   };
 
+  const tabs = [
+    { id: 'property', label: 'Packages liés à une propriété' },
+    { id: 'individual', label: 'Packages individuels' },
+  ];
+
+  const currentPackages = activePackageTab === 'property' ? propertyLinkedPackages : individualPackages;
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div className="mb-4 sm:mb-0">
-              <h1 className="text-2xl font-bold text-gray-900">Tableau de bord partenaire</h1>
-              <p className="text-gray-600">Gérez vos propriétés co-hôtes et vos packages</p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-              <button
-                onClick={() => navigate('/cohosting-explore')}
-                className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors text-center"
-              >
-                Explorer les propriétés
-              </button>
-              <button
-                onClick={() => navigate('/create-package')}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-center"
-              >
-                Créer un package
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <HomeIcon className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">Propriétés co-hôtes</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalProperties}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircleIcon className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">Propriétés publiées</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.publishedProperties}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <ArchiveBoxIcon className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">Total packages</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.totalPackages}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <RocketLaunchIcon className="h-6 w-6 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm text-gray-600">Packages publiés</p>
-                <p className="text-2xl font-semibold text-gray-900">{stats.publishedPackages}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <ErrorAlert message={error} onRetry={retryFetch} />
-        )}
-
-        {/* Properties Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">Mes propriétés co-hôtes</h2>
+        {/* HEADER & ACTION BUTTONS */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-semibold text-gray-900">Tableau de bord partenaire</h1>
+          <div className="flex space-x-4">
             <button
               onClick={() => navigate('/cohosting-explore')}
-              className="text-green-600 hover:text-green-700 font-medium text-sm flex items-center"
+              className="bg-gray-100 text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors"
             >
-              Explorer plus de propriétés
-              <ArrowRightIcon className="h-4 w-4 ml-1" />
+              Explorer les propriétés
+            </button>
+            <button
+              onClick={() => navigate('/create-package')}
+              className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              Créer un package
             </button>
           </div>
+        </div>
 
+
+        {/* STATS CARDS */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-lg shadow p-4 flex flex-col items-start">
+            <HomeIcon className="h-6 w-6 text-green-600 mb-2" />
+            <span className="text-gray-500 text-sm">Mes cohostings</span>
+            <span className="font-semibold text-lg">{stats.publishedProperties}</span>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 flex flex-col items-start">
+            <ArchiveBoxIcon className="h-6 w-6 text-green-600 mb-2" />
+            <span className="text-gray-500 text-sm">Packages publiés</span>
+            <span className="font-semibold text-lg">{stats.publishedPackages}</span>
+          </div>
+          <div className="bg-white rounded-lg shadow p-4 flex flex-col items-start">
+            <ClockIcon className="h-6 w-6 text-green-600 mb-2" />
+            <span className="text-gray-500 text-sm">Brouillons</span>
+            <span className="font-semibold text-lg">{stats.draftPackages}</span>
+          </div>
+        </div>
+
+        {error && <ErrorAlert message={error} onRetry={retryFetch} />}
+
+        {/* PROPERTIES SECTION */}
+        <div className="mb-12">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-gray-900">Mes propriétés</h2>
+          </div>
           {isLoadingProperties ? (
             <LoadingSpinner />
           ) : properties.length > 0 ? (
@@ -429,55 +377,99 @@ export default function PartnerDashboard() {
             </div>
           ) : (
             <EmptyState
-              type="properties"
               icon={HomeIcon}
-              title="Aucune propriété co-hôte"
-              description="Vous ne co-hébergez aucune propriété pour le moment. Explorez les opportunités de co-hébergement disponibles."
-              onAction={() => navigate('/cohosting-explore')}
-              actionText="Explorer les propriétés"
+              title="Aucune propriété"
+              description="Vous n'avez pas encore ajouté de propriété."
+              onAction={() => navigate('/create-property')}
+              actionText="Ajouter une propriété"
             />
           )}
         </div>
 
-        {/* Packages Section */}
+        {/* PACKAGES SECTION */}
         <div>
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">Mes packages</h2>
-            <div className="flex items-center space-x-4">
-              {stats.draftPackages > 0 && (
-                <span className="text-sm text-amber-600 flex items-center">
-                  <ClockIcon className="h-4 w-4 mr-1" />
-                  {stats.draftPackages} brouillon{stats.draftPackages > 1 ? 's' : ''}
-                </span>
-              )}
-              <button
-                onClick={() => navigate('/create-package')}
-                className="text-green-600 hover:text-green-700 font-medium text-sm flex items-center"
-              >
-                Créer un nouveau package
-                <ArrowRightIcon className="h-4 w-4 ml-1" />
-              </button>
-            </div>
+            <button
+              onClick={() => navigate('/create-package')}
+              className="text-green-600 hover:text-green-700 font-medium text-sm flex items-center"
+            >
+              Créer un nouveau package
+              <ArrowRightIcon className="h-4 w-4 ml-1" />
+            </button>
           </div>
 
-          {isLoadingPackages ? (
-            <LoadingSpinner />
-          ) : packages.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {packages.map((pkg) => (
-                <PackageCard key={pkg._id} package={pkg} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              type="packages"
-              icon={ArchiveBoxIcon}
-              title="Aucun package créé"
-              description="Vous n'avez pas encore créé de package. Commencez par créer votre premier package d'expériences pour enrichir les séjours de vos invités."
-              onAction={() => navigate('/create-package')}
-              actionText="Créer mon premier package"
-            />
-          )}
+          {/* Tabs Buttons */}
+          <div className="flex space-x-2 mb-6">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActivePackageTab(tab.id)}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  activePackageTab === tab.id
+                    ? 'bg-green-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Packages List with Slide Animation */}
+          <div className="relative min-h-[200px]">
+            <AnimatePresence mode="wait">
+              {isLoadingPackages ? (
+                <motion.div
+                  key="loading"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                >
+                  <LoadingSpinner />
+                </motion.div>
+              ) : currentPackages.length > 0 ? (
+                <motion.div
+                  key={activePackageTab}
+                  initial={{ x: 50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -50, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {currentPackages.map((pkg) => (
+                      <PackageCard key={pkg._id} package={pkg} />
+                    ))}
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="empty"
+                  initial={{ x: 50, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -50, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                >
+                  <EmptyState
+                    type="packages"
+                    icon={ArchiveBoxIcon}
+                    title={
+                      activePackageTab === 'property'
+                        ? 'Aucun package lié à une propriété'
+                        : 'Aucun package individuel'
+                    }
+                    description={
+                      activePackageTab === 'property'
+                        ? "Vous n'avez pas encore créé de package lié à une propriété."
+                        : "Vous n'avez pas encore créé de package individuel."
+                    }
+                    onAction={() => navigate('/create-package')}
+                    actionText="Créer un package"
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
     </div>

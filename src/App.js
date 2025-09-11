@@ -19,6 +19,7 @@ import PasswordRecoveryScreen from './pages/LogIn/PasswordRecoveryScreen';
 import PasswordRecoveryConfirmation from './pages/LogIn/PasswordRecoveryConfirmation';
 import Explore from './pages/Explore/Explore';
 import Restauration from './pages/Explore/Restauration';
+import PacksPage from './pages/Explore/Packs';
 import Profile from './pages/Profile/Profile';
 import Favorites from './pages/Favorite/Favorite';
 import Navbar from './components/shared/Navbar';
@@ -162,6 +163,7 @@ function App() {
         <Route path="/" element={<ExploreLayout />}>
           <Route index element={<Explore />} />
           <Route path="restauration" element={<Restauration />} />
+          <Route path="/packs" element={<PacksPage />} />
         </Route>
 
 

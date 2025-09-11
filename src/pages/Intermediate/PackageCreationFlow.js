@@ -2,15 +2,20 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+
 const CreatePackageForm = ({ onSuccess, onCancel }) => {
   const navigate = useNavigate();
   const { token } = useContext(AuthContext);
-  const [currentStep, setCurrentStep] = useState(1);
+
+  // START at 0 -> package type selection screen
+  const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Form data state
+
+  // Form data state (added packageType)
   const [formData, setFormData] = useState({
+    packageType: null, // 'property' | 'individual' (null until chosen)
     property: '',
     restaurants: [],
     activities: [],
@@ -26,98 +31,93 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
   const [availableProperties, setAvailableProperties] = useState([]);
   const [loadingProperties, setLoadingProperties] = useState(true);
 
-  // Load partner's properties on mount
+  // Load partner's properties on mount (still happening even if user chooses individual)
   useEffect(() => {
     fetchPartnerProperties();
   }, []);
 
   const fetchPartnerProperties = async () => {
     try {
+      setLoadingProperties(true);
       console.log('🔍 Fetching properties with token:', token ? 'EXISTS' : 'MISSING');
-      
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/partner/my-properties`, {
+      const response = await fetch(`${API_BASE}/api/partner/my-properties`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
         }
       });
-      
-      console.log('📡 Response status:', response.status);
-      console.log('📡 Response headers:', response.headers);
-      
+
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Properties data received:', data);
         setAvailableProperties(data.properties || []);
       } else {
-        const errorText = await response.text();
-        console.error('❌ Error response:', response.status, errorText);
-        setError(`Failed to load properties (${response.status}): ${errorText.substring(0, 100)}`);
+        const errText = await response.text();
+        console.error('Failed to load properties', response.status, errText);
+        setAvailableProperties([]);
       }
     } catch (err) {
-      console.error('❌ Fetch error:', err);
-      setError(`Error loading properties: ${err.message}`);
+      console.error('Fetch error', err);
+      setAvailableProperties([]);
     } finally {
       setLoadingProperties(false);
     }
   };
 
+  // Navigation helpers
   const handleNext = () => {
-    if (currentStep < 6) {
-      setCurrentStep(currentStep + 1);
-    }
+    if (currentStep < 6) setCurrentStep((s) => s + 1);
   };
 
   const handleStepClick = (stepNumber) => {
-    if (stepNumber <= currentStep) {
-      setCurrentStep(stepNumber);
-    }
+    // avoid jumping to step 1 if user hasn't chosen type yet
+    if (currentStep === 0) return;
+    if (stepNumber <= currentStep) setCurrentStep(stepNumber);
   };
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    // if switching to individual, clear property selection
+    if (field === 'packageType' && value === 'individual') {
+      setFormData((prev) => ({ ...prev, packageType: value, property: '' }));
+    } else {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    }
     setError('');
   };
 
-  // Item management functions
+  // Items management
   const addItem = (category, item) => {
-    if (!item.name || !item.price) return;
-    
-    setFormData(prev => ({
+    if (!item.name || item.price === '' || item.price === null) return;
+    setFormData((prev) => ({
       ...prev,
       [category]: [...prev[category], { ...item, price: parseFloat(item.price) }]
     }));
   };
 
   const removeItem = (category, index) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       [category]: prev[category].filter((_, i) => i !== index)
     }));
   };
 
   const editItem = (category, index, updatedItem) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [category]: prev[category].map((item, i) => 
-        i === index ? { ...updatedItem, price: parseFloat(updatedItem.price) } : item
-      )
+      [category]: prev[category].map((it, i) => (i === index ? { ...updatedItem, price: parseFloat(updatedItem.price) } : it))
     }));
   };
 
   const validateStep = (step) => {
     switch (step) {
       case 1:
-        return formData.property !== '';
+        // If user selected individual type, step1 (property) is not required
+        return formData.packageType === 'individual' ? true : !!formData.property;
       case 2:
-        return formData.restaurants.length > 0 || formData.activities.length > 0 || formData.services.length > 0;
+        return (formData.restaurants.length > 0) || (formData.activities.length > 0) || (formData.services.length > 0);
       case 3:
-        return formData.startDate && formData.endDate && new Date(formData.startDate) <= new Date(formData.endDate);
+        return formData.startDate && formData.endDate && (new Date(formData.startDate) <= new Date(formData.endDate));
       case 4:
-        return formData.name.trim() !== '' && formData.description.trim() !== '';
+        return (formData.name || '').trim() !== '' && (formData.description || '').trim() !== '';
       case 5:
         return formData.totalPrice && parseFloat(formData.totalPrice) > 0;
       default:
@@ -125,48 +125,42 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
     }
   };
 
+  // Save draft
   const handleSaveDraft = async () => {
     setIsLoading(true);
     setError('');
-    
     try {
       const payload = { ...formData };
-      if (payload.totalPrice) {
-        payload.totalPrice = parseFloat(payload.totalPrice);
-      }
+      if (payload.totalPrice) payload.totalPrice = parseFloat(payload.totalPrice);
 
-      console.log('💾 Saving draft with payload:', payload);
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/packages`, {
+      const response = await fetch(`${API_BASE}/api/packages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
 
-      console.log('📡 Draft save response status:', response.status);
-      
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Draft saved successfully:', data);
-        
-        // Navigate to partner dashboard after successful draft save
+        if (onSuccess) onSuccess(data);
         navigate('/partner-welcome');
       } else {
-        const errorText = await response.text();
-        console.error('❌ Draft save error:', response.status, errorText);
-        setError(errorText.substring(0, 100) || 'Failed to save draft');
+        const t = await response.text();
+        setError(t.substring(0, 200) || 'Failed to save draft');
       }
     } catch (err) {
-      console.error('❌ Draft save fetch error:', err);
+      console.error(err);
       setError('Error saving draft');
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Publish flow
   const handlePublish = async () => {
+    // validate all steps (1..5)
     if (!validateStep(1) || !validateStep(2) || !validateStep(3) || !validateStep(4) || !validateStep(5)) {
       setError('Please complete all required steps before publishing');
       return;
@@ -174,60 +168,55 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
 
     setIsLoading(true);
     setError('');
-    
     try {
-      // First create the package
       const payload = { ...formData };
-      if (payload.totalPrice) {
-        payload.totalPrice = parseFloat(payload.totalPrice);
-      }
+      if (payload.totalPrice) payload.totalPrice = parseFloat(payload.totalPrice);
 
-      console.log('🚀 Creating package for publish with payload:', payload);
-      const createResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/packages`, {
+      const createResp = await fetch(`${API_BASE}/api/packages`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)
       });
 
-      console.log('📡 Create response status:', createResponse.status);
-
-      if (createResponse.ok) {
-        const createData = await createResponse.json();
-        console.log('✅ Package created:', createData);
-        
-        // Then publish it
-        console.log('📢 Publishing package:', createData.package._id);
-        const publishResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/packages/${createData.package._id}/publish`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        console.log('📡 Publish response status:', publishResponse.status);
-
-        if (publishResponse.ok) {
-          const publishData = await publishResponse.json();
-          console.log('✅ Package published successfully:', publishData);
-          
-          // Navigate to partner dashboard after successful publish
-          navigate('/partner-welcome');
-        } else {
-          const errorText = await publishResponse.text();
-          console.error('❌ Publish error:', publishResponse.status, errorText);
-          setError(errorText.substring(0, 100) || 'Failed to publish package');
-        }
-      } else {
-        const errorText = await createResponse.text();
-        console.error('❌ Create error:', createResponse.status, errorText);
-        setError(errorText.substring(0, 100) || 'Failed to create package');
+      if (!createResp.ok) {
+        const t = await createResp.text();
+        setError(t.substring(0, 200) || 'Failed to create package');
+        setIsLoading(false);
+        return;
       }
+
+      const createData = await createResp.json();
+      const pkgId = createData.package?._id;
+
+      if (!pkgId) {
+        setError('Package created but could not retrieve id');
+        setIsLoading(false);
+        return;
+      }
+
+      const publishResp = await fetch(`${API_BASE}/api/packages/${pkgId}/publish`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': token ? `Bearer ${token}` : '',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!publishResp.ok) {
+        const t = await publishResp.text();
+        setError(t.substring(0, 200) || 'Failed to publish package');
+        setIsLoading(false);
+        return;
+      }
+
+      const publishData = await publishResp.json();
+      if (onSuccess) onSuccess(publishData);
+      navigate('/partner-welcome');
     } catch (err) {
-      console.error('❌ Publish fetch error:', err);
+      console.error(err);
       setError('Error publishing package');
     } finally {
       setIsLoading(false);
@@ -243,33 +232,96 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
     'Review & Publish'
   ];
 
+  // ---------- NEW: Step 0 - Package Type Selection UI ----------
+  const PackageTypeSelection = () => {
+    const choose = (type) => {
+      handleInputChange('packageType', type);
+      // If property type -> go to step 1 to select property
+      // If individual -> skip property step and go to items (step 2)
+      if (type === 'property') {
+        setCurrentStep(1);
+      } else {
+        setCurrentStep(2);
+      }
+    };
+
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
+        <div className="max-w-3xl w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold mb-6">Créer un package</h2>
+          <p className="text-gray-600 mb-8">Choisissez le type de package à créer :</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <button
+              onClick={() => choose('individual')}
+              className="py-6 px-4 rounded-lg border border-gray-200 hover:shadow-md hover:bg-gray-50 transition flex flex-col items-start text-left"
+            >
+              <div className="text-lg font-semibold">Package individuel</div>
+              <div className="text-sm text-gray-600 mt-2">
+                Créez un package d'expériences qui n'est pas lié à une propriété (ex. city tour, food experience).
+              </div>
+            </button>
+
+            <button
+              onClick={() => choose('property')}
+              className="py-6 px-4 rounded-lg border border-gray-200 hover:shadow-md hover:bg-gray-50 transition flex flex-col items-start text-left bg-white"
+            >
+              <div className="text-lg font-semibold">Package lié à une propriété</div>
+              <div className="text-sm text-gray-600 mt-2">
+                Créez un package dédié à une propriété que vous co-hébergez (ex. welcome bundle for guests).
+              </div>
+            </button>
+          </div>
+
+          <div className="mt-8 flex justify-center">
+            <button
+              onClick={() => {
+                if (onCancel) onCancel();
+                else navigate(-1);
+              }}
+              className="px-4 py-2 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // If we are at step 0 render only selection screen
+  if (currentStep === 0) {
+    return <PackageTypeSelection />;
+  }
+
+  // ---------- Rest of the original form UI (starts from step 1) ----------
   return (
     <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-lg">
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
-          {steps.map((step, index) => (
-            <div 
-              key={index} 
+          {steps.map((s, idx) => (
+            <div
+              key={idx}
               className="flex flex-col items-center cursor-pointer"
-              onClick={() => handleStepClick(index + 1)}
+              onClick={() => handleStepClick(idx + 1)}
             >
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                index + 1 <= currentStep 
-                  ? 'bg-green-500 text-white hover:bg-green-600' 
+                idx + 1 <= currentStep
+                  ? 'bg-green-500 text-white hover:bg-green-600'
                   : 'bg-gray-200 text-gray-600 cursor-not-allowed'
               }`}>
-                {index + 1}
+                {idx + 1}
               </div>
-              <span className="text-xs mt-2 text-gray-600">{step}</span>
+              <span className="text-xs mt-2 text-gray-600">{s}</span>
             </div>
           ))}
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
-          <div 
+          <div
             className="bg-green-500 h-2 rounded-full transition-all duration-300"
-            style={{ width: `${(currentStep / steps.length) * 100}%` }}
-          ></div>
+            style={{ width: `${(Math.min(currentStep, steps.length) / steps.length) * 100}%` }}
+          />
         </div>
       </div>
 
@@ -281,46 +333,73 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
 
       {/* Step Content */}
       <div className="min-h-96">
-        {/* Step 1: Choose Property */}
+        {/* Step 1: Choose Property (only relevant if packageType === 'property') */}
         {currentStep === 1 && (
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Property</h2>
+            {/* Back arrow to go back to type selection */}
+            <div className="mb-4">
+              <button
+                onClick={() => {
+                  // Reset selection and go back to step 0
+                  setFormData((prev) => ({ ...prev, packageType: null, property: '' }));
+                  setCurrentStep(0);
+                }}
+                className="flex items-center text-gray-600 hover:text-gray-800"
+              >
+                <span className="mr-2 text-lg">←</span>
+                <span>Retour</span>
+              </button>
+            </div>
+
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Choisissez une propriété</h2>
+
             {loadingProperties ? (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
                 <p className="text-gray-600 mt-4">Loading your properties...</p>
               </div>
-            ) : availableProperties.length === 0 ? (
-              <div className="text-center py-8">
-                <p className="text-gray-600">You don't have any properties to create packages for.</p>
-                <p className="text-sm text-gray-500 mt-2">You need to be accepted as a co-host first.</p>
-              </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {availableProperties.map((property) => (
-                  <div 
-                    key={property._id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                      formData.property === property._id
-                        ? 'border-green-500 bg-green-50'
-                        : 'border-gray-200 hover:border-green-300'
-                    }`}
-                    onClick={() => handleInputChange('property', property._id)}
-                  >
-                    {property.photos && property.photos.length > 0 && (
-                      <img 
-                        src={property.photos[0]} 
-                        alt={property.title}
-                        className="w-full h-32 object-cover rounded-md mb-3"
-                      />
-                    )}
-                    <h3 className="font-semibold text-gray-900">{property.title}</h3>
-                    <p className="text-sm text-gray-600 mt-1">
-                      {property.localisation?.city || 'Location not specified'}
-                    </p>
+              <>
+                {formData.packageType === 'property' && availableProperties.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600">You don't have any properties to create packages for.</p>
+                    <p className="text-sm text-gray-500 mt-2">You need to be accepted as a co-host first.</p>
                   </div>
-                ))}
-              </div>
+                ) : formData.packageType === 'property' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {availableProperties.map((property) => (
+                      <div
+                        key={property._id}
+                        className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                          formData.property === property._id
+                            ? 'border-green-500 bg-green-50'
+                            : 'border-gray-200 hover:border-green-300'
+                        }`}
+                        onClick={() => handleInputChange('property', property._id)}
+                      >
+                        {property.photos && property.photos.length > 0 && (
+                          <img
+                            src={property.photos[0]}
+                            alt={property.title}
+                            className="w-full h-32 object-cover rounded-md mb-3"
+                          />
+                        )}
+                        <h3 className="font-semibold text-gray-900">{property.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {property.localisation?.city || 'Location not specified'}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600">
+                      You're creating an <strong>Individual Package</strong> — no property is required.
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">Proceed to add items and details in the next steps.</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -330,31 +409,28 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Items</h2>
             <p className="text-gray-600 mb-6">Add restaurants, activities, or services to your package (at least one required)</p>
-            
+
             <div className="space-y-8">
-              {/* Existing Items */}
-              <ItemSection 
-                title="Restaurants" 
+              <ItemSection
+                title="Restaurants"
                 category="restaurants"
                 items={formData.restaurants}
                 onAddItem={addItem}
                 onRemoveItem={removeItem}
                 onEditItem={editItem}
               />
-              
-              {/* Activities */}
-              <ItemSection 
-                title="Activities" 
+
+              <ItemSection
+                title="Activities"
                 category="activities"
                 items={formData.activities}
                 onAddItem={addItem}
                 onRemoveItem={removeItem}
                 onEditItem={editItem}
               />
-              
-              {/* Services */}
-              <ItemSection 
-                title="Services" 
+
+              <ItemSection
+                title="Services"
                 category="services"
                 items={formData.services}
                 onAddItem={addItem}
@@ -417,7 +493,7 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
                   rows="4"
                   placeholder="Describe your package..."
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                ></textarea>
+                />
               </div>
             </div>
           </div>
@@ -457,14 +533,14 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
           {currentStep > 1 && (
             <>
               <button
-                onClick={() => handleStepClick(1)}
+                onClick={() => setCurrentStep(1)}
                 className="px-3 py-2 text-sm text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
                 disabled={isLoading}
               >
                 First
               </button>
               <button
-                onClick={() => handleStepClick(currentStep - 1)}
+                onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
                 className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
                 disabled={isLoading}
               >
@@ -485,7 +561,11 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
                 {isLoading ? 'Saving...' : 'Save Draft'}
               </button>
               <button
-                onClick={handleNext}
+                onClick={() => setCurrentStep((s) => {
+                  // If currently at step 1 and user selected individual, skip to step 2
+                  if (s === 1 && formData.packageType === 'individual') return 2;
+                  return Math.min(6, s + 1);
+                })}
                 className={`px-4 py-2 text-white rounded-md transition-colors ${
                   validateStep(currentStep)
                     ? 'bg-green-500 hover:bg-green-600'
@@ -520,7 +600,7 @@ const CreatePackageForm = ({ onSuccess, onCancel }) => {
   );
 };
 
-// Item Section Component with inline editing
+// Item Section Component with inline editing (unchanged)
 const ItemSection = ({ title, category, items, onAddItem, onRemoveItem, onEditItem }) => {
   const [newItem, setNewItem] = useState({ name: '', description: '', price: '', thumbnail: '' });
   const [showAddForm, setShowAddForm] = useState(false);
@@ -567,27 +647,26 @@ const ItemSection = ({ title, category, items, onAddItem, onRemoveItem, onEditIt
           {items.map((item, index) => (
             <div key={index} className="bg-gray-50 p-3 rounded-md">
               {editingIndex === index ? (
-                // Edit Mode
                 <div className="space-y-3">
                   <input
                     type="text"
                     placeholder="Name"
                     value={editingItem.name}
-                    onChange={(e) => setEditingItem({...editingItem, name: e.target.value})}
+                    onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                   />
                   <textarea
                     placeholder="Description"
                     value={editingItem.description}
-                    onChange={(e) => setEditingItem({...editingItem, description: e.target.value})}
+                    onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                     rows="2"
-                  ></textarea>
+                  />
                   <input
                     type="number"
                     placeholder="Price (MAD)"
                     value={editingItem.price}
-                    onChange={(e) => setEditingItem({...editingItem, price: e.target.value})}
+                    onChange={(e) => setEditingItem({ ...editingItem, price: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
                     min="0"
                     step="0.01"
@@ -609,13 +688,10 @@ const ItemSection = ({ title, category, items, onAddItem, onRemoveItem, onEditIt
                   </div>
                 </div>
               ) : (
-                // Display Mode
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <h4 className="font-medium text-gray-900">{item.name}</h4>
-                    {item.description && (
-                      <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                    )}
+                    {item.description && <p className="text-sm text-gray-600 mt-1">{item.description}</p>}
                     <p className="text-sm font-medium text-green-600 mt-1">{item.price} MAD</p>
                   </div>
                   <div className="flex space-x-2 ml-4">
@@ -646,21 +722,21 @@ const ItemSection = ({ title, category, items, onAddItem, onRemoveItem, onEditIt
             type="text"
             placeholder="Name"
             value={newItem.name}
-            onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+            onChange={(e) => setNewItem({ ...newItem, name: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
           />
           <textarea
             placeholder="Description"
             value={newItem.description}
-            onChange={(e) => setNewItem({...newItem, description: e.target.value})}
+            onChange={(e) => setNewItem({ ...newItem, description: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             rows="2"
-          ></textarea>
+          />
           <input
             type="number"
             placeholder="Price (MAD)"
             value={newItem.price}
-            onChange={(e) => setNewItem({...newItem, price: e.target.value})}
+            onChange={(e) => setNewItem({ ...newItem, price: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
             min="0"
             step="0.01"
@@ -688,27 +764,28 @@ const ItemSection = ({ title, category, items, onAddItem, onRemoveItem, onEditIt
 
 // Package Preview Component
 const PackagePreview = ({ formData, availableProperties }) => {
-  const selectedProperty = availableProperties.find(p => p._id === formData.property);
-  const totalItems = formData.restaurants.length + formData.activities.length + formData.services.length;
+  const selectedProperty = availableProperties.find((p) => p._id === formData.property);
+  const totalItems = (formData.restaurants?.length || 0) + (formData.activities?.length || 0) + (formData.services?.length || 0);
 
   return (
     <div className="space-y-6">
       <div className="bg-gray-50 p-6 rounded-lg">
         <h3 className="text-xl font-semibold text-gray-900 mb-4">Package Summary</h3>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <h4 className="font-medium text-gray-700 mb-2">Basic Information</h4>
+            <p><strong>Type:</strong> {formData.packageType === 'property' ? `Property – ${selectedProperty?.title || 'Not selected'}` : 'Individual'}</p>
             <p><strong>Name:</strong> {formData.name}</p>
             <p><strong>Description:</strong> {formData.description}</p>
             <p><strong>Price:</strong> {formData.totalPrice} MAD</p>
           </div>
-          
+
           <div>
             <h4 className="font-medium text-gray-700 mb-2">Property & Dates</h4>
-            <p><strong>Property:</strong> {selectedProperty?.title}</p>
-            <p><strong>Start Date:</strong> {new Date(formData.startDate).toLocaleDateString()}</p>
-            <p><strong>End Date:</strong> {new Date(formData.endDate).toLocaleDateString()}</p>
+            <p><strong>Property:</strong> {selectedProperty?.title || '—'}</p>
+            <p><strong>Start Date:</strong> {formData.startDate ? new Date(formData.startDate).toLocaleDateString() : '—'}</p>
+            <p><strong>End Date:</strong> {formData.endDate ? new Date(formData.endDate).toLocaleDateString() : '—'}</p>
           </div>
         </div>
 
@@ -719,31 +796,25 @@ const PackagePreview = ({ formData, availableProperties }) => {
               <div>
                 <h5 className="font-medium text-green-600">Restaurants ({formData.restaurants.length})</h5>
                 <ul className="text-sm text-gray-600 mt-1">
-                  {formData.restaurants.map((item, index) => (
-                    <li key={index}>{item.name} - {item.price} MAD</li>
-                  ))}
+                  {formData.restaurants.map((item, index) => <li key={index}>{item.name} - {item.price} MAD</li>)}
                 </ul>
               </div>
             )}
-            
+
             {formData.activities.length > 0 && (
               <div>
                 <h5 className="font-medium text-green-600">Activities ({formData.activities.length})</h5>
                 <ul className="text-sm text-gray-600 mt-1">
-                  {formData.activities.map((item, index) => (
-                    <li key={index}>{item.name} - {item.price} MAD</li>
-                  ))}
+                  {formData.activities.map((item, index) => <li key={index}>{item.name} - {item.price} MAD</li>)}
                 </ul>
               </div>
             )}
-            
+
             {formData.services.length > 0 && (
               <div>
                 <h5 className="font-medium text-green-600">Services ({formData.services.length})</h5>
                 <ul className="text-sm text-gray-600 mt-1">
-                  {formData.services.map((item, index) => (
-                    <li key={index}>{item.name} - {item.price} MAD</li>
-                  ))}
+                  {formData.services.map((item, index) => <li key={index}>{item.name} - {item.price} MAD</li>)}
                 </ul>
               </div>
             )}
