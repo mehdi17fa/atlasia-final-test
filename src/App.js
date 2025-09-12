@@ -65,6 +65,7 @@ import PartnerCohostingManagement from './pages/Intermediate/PartnerCohostingMan
 // import PackageNameStep from './pages/Intermediate/PackageNameStep';
 // import PackagePriceStep from './pages/Intermediate/PackagePriceStep';
 import PackageCreationFlow from './pages/Intermediate/PackageCreationFlow';
+import PackageDetailPage from './pages/Packages/PackageDetails';
 
 
 import BookingConfirm from './pages/Booking/BookingConfirm';
@@ -238,8 +239,12 @@ function App() {
         <Route path="/select-property" element={<SelectPropertyStep />} />
         {/* <Route path="/select-res" element={<SelectResStep />} /> */}
         {/* <Route path="/package-name" element={<PackageNameStep />} />
+
+        
         
         <Route path="/package-price" element={<PackagePriceStep />} /> */}
+
+        <Route path="/package/:packageId" element={<PackageDetailPage />} />
 
         <Route path="/data" element={<DocumentUpload />} />
       </Routes>
