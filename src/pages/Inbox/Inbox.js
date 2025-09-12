@@ -127,8 +127,13 @@ export default function Inbox() {
   return (
     <div className="max-w-md mx-auto bg-white min-h-screen">
       {/* Header */}
+
+
+      
       <div className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+        
         <div className="px-6 py-4">
+          
           <h1 className="text-2xl font-bold text-gray-900">Messages</h1>
           <p className="text-sm text-gray-600 mt-1">
             {conversations.length} conversation{conversations.length !== 1 ? 's' : ''}

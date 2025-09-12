@@ -4,7 +4,7 @@ import axios from "axios";
 import ListingCardGrid from "../../components/ListingCard/ListingCardGrid";
 import SectionTitle from "../../components/shared/SectionTitle";
 import { AuthContext } from "../../context/AuthContext";
-
+import { useNavigate } from "react-router-dom";
 const API_BASE = process.env.REACT_APP_API_URL || "http://localhost:4000";
 
 export default function MyProperties() {
@@ -12,7 +12,7 @@ export default function MyProperties() {
   const [draftProperties, setDraftProperties] = useState([]);
   const [publishedProperties, setPublishedProperties] = useState([]);
   const [loading, setLoading] = useState(true);
-
+  const navigate = useNavigate();
   useEffect(() => {
     if (!token) {
       // Pas de token, on ne fetch pas
@@ -48,6 +48,24 @@ export default function MyProperties() {
 
   return (
     <div className="px-4 py-8 max-w-5xl mx-auto">
+      <div className="flex items-center justify-center mb-4 relative">
+      {/* Back arrow button */}
+      <button
+        onClick={() => navigate(-1)} // go back
+        className="absolute left-0 text-green-700 hover:text-green-900 transition"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+      </button>
+      </div>
       {/* Draft Properties */}
       <SectionTitle title="Brouillons" />
       {draftProperties.length > 0 ? (

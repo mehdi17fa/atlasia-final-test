@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -9,6 +9,8 @@ import {
 
 import { useState } from 'react';
 
+// Import AuthContext
+import { AuthContext } from './context/AuthContext';
 
 import SignUpScreen from './pages/SignUp/SignUpScreen';
 import IdentificationScreen from './pages/SignUp/IdentificationScreen';
@@ -23,6 +25,9 @@ import PacksPage from './pages/Explore/Packs';
 import Profile from './pages/Profile/Profile';
 import Favorites from './pages/Favorite/Favorite';
 import Navbar from './components/shared/Navbar';
+import NavbarProperty from './components/shared/NavbarProperty';
+import NavbarPartner from './components/shared/NavbarPartner';
+
 import { PropertyCreationProvider } from './context/PropertyCreationContext';
 import WelcomeScreen from './pages/WelcomeScreen';
 import ResetPasswordScreen from './pages/LogIn/ResetPasswordScreen';
@@ -61,15 +66,8 @@ import SelectPropertyStep from './pages/Intermediate/SelectPropertyStep';
 import CohostingExplore from './pages/Explore/CohostingExplore';
 import CoHostPropertyPreview from './pages/Intermediate/CoHostPropertyPreview'; 
 import PartnerCohostingManagement from './pages/Intermediate/PartnerCohostingManagement';
-// import SelectResStep from './pages/Intermediate/SelectResStep';
-// import PackageNameStep from './pages/Intermediate/PackageNameStep';
-// import PackagePriceStep from './pages/Intermediate/PackagePriceStep';
 import PackageCreationFlow from './pages/Intermediate/PackageCreationFlow';
 import PackageDetailPage from './pages/Packages/PackageDetails';
-
-
-import BookingConfirm from './pages/Booking/BookingConfirm';
-import BookingRequest from './pages/Booking/BookingRequest';
 
 // Inbox / Chat
 import Inbox from './pages/Inbox/Inbox';
@@ -133,16 +131,27 @@ function GuestsSelectionScreenWrapper() {
   );
 }
 
-// Conditional mobile navbar
+// Updated Conditional navbar with role-based logic
 function ConditionalNavbar() {
   const location = useLocation();
+  const { user } = useContext(AuthContext);
   const isChatPage = location.pathname.startsWith('/chat/');
 
+  // Don't show navbar on chat pages
   if (isChatPage) return null;
 
+  // Don't show navbar if user is not logged in
+  if (!user) return null;
+
   return (
-    <div className="block md:hidden">
-      <Navbar />
+    <div className="block">
+      {user.role === 'owner' ? (
+        <NavbarProperty />
+      ) : user.role === 'partner' ? (
+        <NavbarPartner />
+      ) : (
+        <Navbar />
+      )}
     </div>
   );
 }
@@ -167,9 +176,9 @@ function App() {
           <Route path="/packs" element={<PacksPage />} />
         </Route>
 
-
         <Route path="/search" element={<PropertySearchFlow />} />
         <Route path="/search/results" element={<SearchResults />} />
+        
         {/* General / Auth */}
         <Route path="/login" element={<LoginScreen />} />
         <Route path="/signup" element={<SignUpScreen />} />
@@ -193,14 +202,13 @@ function App() {
         <Route path="/property/:id" element={<PropertyPreview />} />
         <Route path="/owner/:id" element={<OwnerDetails />} />
         <Route path="/owner/:ownerId" element={<CoHostPropertyPreview />} />
-        <Route path="/owner/income" element={<OwnerIncomePage />} />
 
-        
         {/* Co-hosting routes - ADD THIS SECTION */}
         <Route path="/cohosting-explore" element={<CohostingExplore />} />
         <Route path="/cohosting-preview/:propertyId" element={<CoHostPropertyPreview />} />
         <Route path="/partner/cohosting-management" element={<PartnerCohostingManagement />} />
         
+<<<<<<< HEAD
         <Route path="/booking/confirm/:propertyId" element={<BookingConfirm />} />
         <Route path="/booking/request/:propertyId" element={<BookingRequest />} />
 
@@ -208,6 +216,8 @@ function App() {
 
         <Route path="/favorites-properties" element={<FavoritesProperties />} />
 
+=======
+>>>>>>> origin/BetaFront
 
         {/* Messages */}
         <Route path="/inbox" element={<Inbox />} />
@@ -237,6 +247,7 @@ function App() {
         {/* Intermediate */}
         <Route path="/create-package" element={<PackageCreationFlow />} />
         <Route path="/select-property" element={<SelectPropertyStep />} />
+<<<<<<< HEAD
         {/* <Route path="/select-res" element={<SelectResStep />} /> */}
         {/* <Route path="/package-name" element={<PackageNameStep />} />
 
@@ -246,7 +257,12 @@ function App() {
 
         <Route path="/package/:packageId" element={<PackageDetailPage />} />
 
+=======
+        <Route path='/performance' element={<Performance />} />
+>>>>>>> origin/BetaFront
         <Route path="/data" element={<DocumentUpload />} />
+        <Route path="/acceuill" element={<HomeIntermédiaire />} />
+
       </Routes>
       </FavoritesProvider>
       <ConditionalNavbar />
