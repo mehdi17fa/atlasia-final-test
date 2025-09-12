@@ -1,3 +1,4 @@
+
 import React from "react";
 import ListingCard from "./ListingCard";
 
@@ -17,6 +18,7 @@ export default function ListingCardGrid({ listings, onCardClick, showHeartButton
           onDelete={onDelete}
         />
       ))}
+
     </div>
   );
 }
