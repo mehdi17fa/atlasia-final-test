@@ -11,11 +11,11 @@ const OwnerBottomNavbar = () => {
     {
       label: 'Accueil',
       icon: (
-        <svg fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 9.75L12 4l9 5.75V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.75z" />
-      </svg>
+        <svg className="w-6 h-6" fill="none" stroke={isActive('/owner/home') ? "#166534" : "#6b7280"} strokeWidth="1.5" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 9.75L12 3l9 6.75v9.75a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19.5V9.75z" />
+        </svg>
       ),
-      path: '/',
+      path: '/owner/home',
     },
     {
       label: 'Activités',
@@ -24,7 +24,7 @@ const OwnerBottomNavbar = () => {
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 18V6a2 2 0 0 1 2-2h4m4 0h4a2 2 0 0 1 2 2v12m-6-4h.01M4 12h16" />
         </svg>
       ),
-      path: '/',
+      path: '/owner/activities',
     },
     {
       label: 'Mes propriétés',
@@ -33,7 +33,7 @@ const OwnerBottomNavbar = () => {
           <path strokeLinecap="round" strokeLinejoin="round" d="M3 10l9-6 9 6v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-8z" />
         </svg>
       ),
-      path: '/',
+      path: '/owner/properties',
     },
     {
       label: 'Inbox',
@@ -45,7 +45,7 @@ const OwnerBottomNavbar = () => {
           <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-green-600"></span>
         </div>
       ),
-      path: '/',
+      path: '/owner/inbox',
     },
     {
       label: 'Profile',
@@ -54,12 +54,12 @@ const OwnerBottomNavbar = () => {
           <path strokeLinecap="round" strokeLinejoin="round" d="M5.121 17.804A9 9 0 0 1 12 15a9 9 0 0 1 6.879 2.804M15 11a3 3 0 1 0-6 0 3 3 0 0 0 6 0z" />
         </svg>
       ),
-      path: '/profile',
+      path: '/owner/profile',
     },
   ];
 
   return (
-    <nav className="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 flex justify-around py-2 z-50">
       {navItems.map((item) => (
         <button
           key={item.label}

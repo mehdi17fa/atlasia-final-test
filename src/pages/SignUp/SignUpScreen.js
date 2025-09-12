@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-export default function SignUpScreen({onClose}) {
+export default function SignUpScreen() {
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,7 +54,7 @@ export default function SignUpScreen({onClose}) {
   };
 
   const handleClose = () => {
-    navigate('/');
+    navigate(-1);
   };
 
   return (
@@ -65,7 +65,7 @@ export default function SignUpScreen({onClose}) {
           <div className="flex flex-col items-center justify-start px-6 py-8">
             <div className="w-full mb-4 relative">
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="text-2xl hover:opacity-70 absolute -top-2 -right-2 text-gray-600"
               >
                 ✕

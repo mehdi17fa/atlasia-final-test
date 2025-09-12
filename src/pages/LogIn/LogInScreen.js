@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 
-export default function LoginScreen({onClose}) {
+export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -50,9 +50,7 @@ export default function LoginScreen({onClose}) {
         // Navigate based on role
         if (response.data.user.role === 'owner') navigate('/owner-welcome');
         else if (response.data.user.role === 'partner') navigate('/partner-welcome');
-        else navigate('/');
-        
-        onClose();
+        else navigate('/profile');
     
       } catch (err) {
         console.error('Login error:', err.response?.data || err.message);
@@ -70,7 +68,7 @@ export default function LoginScreen({onClose}) {
       <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto relative">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="text-2xl hover:opacity-70 absolute top-4 right-4 text-gray-600"
           >
             ✕
